@@ -271,19 +271,18 @@ NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,ENV,TUNING torchrun --nproc_per_node 8 ex
 
 **不同 8×RTX PRO 5000 机器的 DistMuon 速度**（micro 32 × 8 × GA 1，开激活重算）：
 
-| | A（本复现） | B（默认） | B（调 NCCL） | C |
-|---|---|---|---|---|
-| CPU / NUMA | 2 × AMD EPYC 9575F，2 个 NUMA | 未提供 | 同左 | 未提供，2 个 NUMA |
-| GPU 连接 | PCIe Gen5，无 NVLink；每 2 张卡共用一块 ConnectX-8 的 PCIe 交换 | 未提供 | 同左 | PCIe，无 NVLink；8 卡分在 2 个 NUMA |
-| 跨 NUMA 通信 | 网卡 + GPU 直连（`NET/IB/GDRDMA`） | 未提供 | 同左 | 未提供 |
-| NCCL 版本 | 2.27.3 | 未提供 | 同左 | 2.27.3 |
-| NCCL 环境变量 | 无 | 无 | `NCCL_MIN_CTAS=8`<br>`NCCL_NTHREADS=128`<br>并 unset `NCCL_MIN/MAX_NCHANNELS`、`NCCL_MIN/MAX_NRINGS`、`NCCL_ALGO`、`NCCL_PROTO`、`NCCL_THREAD_THRESHOLDS` | 未提供 |
-| NCCL 实际通道 × 每通道线程 | 4 × 512 | 未提供 | 8 × 128 | 未提供 |
-| all-gather / reduce-scatter 带宽 | 25.8 / 25.6 GB/s（busbw） | 未测 | 未测 | 约 29 / 20 GB/s（口径未知） |
-| 代码 | 本分支 | 本分支 | 本分支 | 更早的版本；优化器通信先转 BF16 |
-| step 耗时 | **4.767 s** | **5.567 s** | **约 4.66 s** | **5.350 s** |
+| | A（本复现） | B（未启用 RDMA） | B（未启用 RDMA，调 NCCL） | B（启用 RDMA） | C |
+|---|---|---|---|---|---|
+| CPU / NUMA | 2 × AMD EPYC 9575F，2 个 NUMA | 同 A | 同 A | 同 A | 未提供，2 个 NUMA |
+| GPU 连接 | PCIe Gen5，无 NVLink；每 2 张卡共用一块 ConnectX-8 的 PCIe 交换 | 同 A | 同 A | 同 A | PCIe，无 NVLink；8 卡分在 2 个 NUMA |
+| 跨 NUMA 通信 | 网卡 + GPU 直连（`NET/IB/GDRDMA`） | 经 CPU 内存中转（`SHM`） | 经 CPU 内存中转（`SHM`） | 同 A | 未提供 |
+| NCCL 版本 | 2.27.3 | 2.27.3 | 2.27.3 | 2.27.3 | 2.27.3 |
+| NCCL 环境变量 | 无 | 无 | `NCCL_MIN_CTAS=8`<br>`NCCL_NTHREADS=128` | 无 | 未提供 |
+| all-gather / reduce-scatter 带宽 | 25.8 / 25.6 GB/s（busbw） | 未测 | 未测 | 25.8 / 25.6 GB/s（busbw） | 约 29 / 20 GB/s（口径未知） |
+| 代码 | 本分支 | 本分支 | 本分支 | 本分支 | 更早的版本；优化器通信先转 BF16 |
+| step 耗时 | **4.767 s** | **5.567 s** | **约 4.66 s** | **4.778 s** | **5.350 s** |
 
-- 同样的代码，机器 B 用默认 NCCL 设置时比 A 慢约 0.8 s/步，改 NCCL 设置后与 A 相当，差距都在通信上；在 A 上同样的设置反而略慢（见上一张表）。
+- 机器 B 与 A 硬件相同。B 最初在容器里没有启用 RDMA（缺少 `--network=host --device=/dev/infiniband --ulimit memlock=-1`），跨 NUMA 的通信经 CPU 内存中转，比 A 慢约 0.8 s/步；启用 RDMA 后与 A 一致。未启用 RDMA 时，调大 NCCL 通道数也能补回大部分差距；启用 RDMA 后同样的设置反而略慢（见上一张表）。详见 [PRO5000_DISTMUON_UPDATE.md](PRO5000_DISTMUON_UPDATE.md)。
 - 机器之间的速度差主要来自各自 NCCL 默认设置能否用满链路。换机器时，先用 `coll_bw.py` 和 `NCCL_DEBUG=INFO` 看带宽、通道数和每段连接的方式，再决定要不要调 NCCL 设置。
 
 **优化器通信改成 BF16**：官方 DistMuon（`lingbotvla/optim/flex_shard/dist_muon.py`）每步要在卡之间做两次 all-to-all：先把动量更新后的梯度发到负责计算的卡上，算完 Newton-Schulz 后再把更新方向发回去，两次都按参数的 dtype（FP32）传输。
@@ -311,6 +310,7 @@ NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,ENV,TUNING torchrun --nproc_per_node 8 ex
 | `mem_probe.py` | 启动包装：训练代码不改，每秒记录各卡 PyTorch 显存峰值 |
 | `nsys_probe.py` | 启动包装：训练代码不改，标出 step 和 optimizer.step 的 NVTX 区间，并在指定 step 开关 nsys 录制 |
 | `nsys_rank0.sh` | `NSYS_STEPS` 打开时由 torchrun 调用：rank 0 在 nsys 下运行，其他 rank 正常运行 |
+| `PRO5000_DISTMUON_UPDATE.md` | RTX PRO 5000 DistMuon 测速更新：结果、两台机器测速不一致的原因（RDMA）、可尝试的提速方法 |
 | `coll_bw.py` | 测 all-gather / reduce-scatter 带宽，用来比较 NCCL 设置和不同机器 |
 | `summarize_run.py` | 统计 step 耗时、墙钟、loss、显存峰值，并标出过热降频的 GPU |
 | `figures/` | 8 张结果和参考图，见"结果 → 图" |
