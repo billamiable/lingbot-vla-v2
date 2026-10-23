@@ -21,6 +21,8 @@
 #   NSYS_STEPS   e.g. 31-35: record an Nsight Systems timeline of these steps on rank 0
 #                ($OUT/nsys_rank0.nsys-rep); nsys ends the job after the last step.
 #                NSYS_ARGS adds nsys options, e.g. "--pytorch=autograd-nvtx" for op names
+#   COLL_LOG     1 = log size, 16-byte alignment and time of every all-gather/reduce-scatter
+#                to $OUT/coll_rank<R>.csv (experiment/nccl_align/coll_log.py)
 # Extra arguments are passed to the trainer, e.g. `--train.optimizer muon` for plain Muon.
 set -euo pipefail
 NAME=${1:?usage: train.sh <run_name> [--key value ...]}; shift
@@ -63,6 +65,10 @@ ENTRY=(tasks/vla/train_lingbotvla.py)
 if [ "$MEM_PROBE" = 1 ]; then
   ENTRY=(experiment/single_node_repro/mem_probe.py "${ENTRY[@]}")
   export MEM_PROBE_DIR=$OUT
+fi
+if [ "${COLL_LOG:-0}" = 1 ]; then
+  ENTRY=(experiment/nccl_align/coll_log.py "${ENTRY[@]}")
+  export COLL_LOG_DIR=$OUT
 fi
 RUNNER=()
 if [ -n "${NSYS_STEPS:-}" ]; then
