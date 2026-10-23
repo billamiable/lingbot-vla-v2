@@ -41,6 +41,18 @@ python experiment/teacher_cache/summarize_ab.py $OUT_ROOT --ref-300w <300 W 下�
 
 `run_ab.sh` 依次运行：在线 teacher 基线；一次 verify；清空 page cache 后的 read（缓存从磁盘读）；缓存已在内存中的 read；以及 300 W 下各 500 步的 read 和 verify。结果见 [REPORT.md](REPORT.md)。
 
+## 云盘模拟
+
+```bash
+bash experiment/teacher_cache/essd_sim/essd_sim.sh setup /raid/teacher_cache/robotwin_clean   # 建模拟盘并拷入缓存
+PY=... MODEL_ROOT=... DATA_LIST=... OUT_ROOT=... CACHE=/raid/teacher_cache/robotwin_clean \
+  SIM_CACHE=/mnt/essd_sim/robotwin_clean bash experiment/teacher_cache/essd_sim/run_essd.sh
+python experiment/teacher_cache/essd_sim/summarize_essd.py $OUT_ROOT
+bash experiment/teacher_cache/essd_sim/essd_sim.sh teardown                                     # 删除模拟盘
+```
+
+`run_essd.sh` 依次运行：缓存在本地 NVMe；模拟云盘限速到 ESSD PL1、PL0 的每盘上限；PL0 再加读取延迟。需要 root 权限（loop 设备、device-mapper、cgroup 限速）。结果见 [REPORT.md](REPORT.md) 第 6 节。
+
 检查脚本：
 
 - `check_future_frames.py`：比较每个样本的未来帧，和它的未来帧深度所在那一行的当前帧，确认两者像素一致。
