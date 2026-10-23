@@ -91,6 +91,7 @@ def build_parallelize_model(
     use_depth_align: bool = False,
     split_fused_experts_from_decoder_fsdp: bool = False,
     vlm_fsdp: bool = False,
+    use_compile: bool = False,
     **kwargs,
 ) -> "nn.Module":
     """
@@ -362,6 +363,75 @@ def build_parallelize_model(
                     if layer.__class__.__name__ in FSDP_LAYER_CLASS_NAMES:
                         logger.info_rank0(f"Apply FSDP2 to {layer.__class__.__name__}.")
                         fully_shard(layer, **mp_fsdp_kwargs)
+
+                # Decoder-only traversal leaves the entire vision transformer and
+                # token table in the root all-gather. Apply FSDP bottom-up to the
+                # vision blocks, their remaining stem/mergers, and token table too.
+                qwenvl = model.model.qwenvl_with_expert.qwenvl
+                vision, vision_path = _resolve(qwenvl, [("model", "visual"), ("visual",)])
+                embedding, embedding_path = _resolve(qwenvl, [
+                    ("model", "language_model", "embed_tokens"),
+                    ("model", "embed_tokens"),
+                    ("language_model", "model", "embed_tokens"),
+                ])
+                if vision is None or not isinstance(getattr(vision, "blocks", None), nn.ModuleList):
+                    raise RuntimeError("Could not locate the Qwen-VL vision transformer blocks for FSDP2.")
+                if not isinstance(embedding, nn.Embedding):
+                    raise RuntimeError("Could not locate the Qwen-VL token embedding for FSDP2.")
+                logger.info_rank0(
+                    f"FSDP2 sharding vision via {vision_path}, n_blocks={len(vision.blocks)}; "
+                    f"token embedding via {embedding_path}"
+                )
+                # Rotary tensors are computed inside the outer model in FP32.
+                # New FSDP boundaries must not downcast these auxiliary inputs.
+                policy = mp_fsdp_kwargs["mp_policy"]
+                vision_fsdp_kwargs = dict(mp_fsdp_kwargs, mp_policy=MixedPrecisionPolicy(
+                    param_dtype=policy.param_dtype,
+                    reduce_dtype=policy.reduce_dtype,
+                    output_dtype=policy.output_dtype,
+                    cast_forward_inputs=False,
+                ))
+                for block in vision.blocks:
+                    fully_shard(block, **vision_fsdp_kwargs)
+                    if use_compile:
+                        # Compile the math inside FSDP/checkpoint hooks so the
+                        # new boundaries retain the original vision fusions.
+                        block.forward = torch.compile(block.forward)
+                # Keep positional embeddings in the visual parent: the HF
+                # interpolator inspects their dtype before calling the embedding.
+                # Stems and mergers are real forward modules and can be sharded.
+                vision_stages = []
+                patch_embed = getattr(vision, "patch_embed", None)
+                mergers = list(getattr(vision, "deepstack_merger_list", []))
+                final_merger = getattr(vision, "merger", None)
+                for component in [patch_embed, *mergers, final_merger]:
+                    if isinstance(component, nn.Module):
+                        fully_shard(component, **vision_fsdp_kwargs)
+                        if use_compile:
+                            component.forward = torch.compile(component.forward)
+                if isinstance(patch_embed, nn.Module):
+                    vision_stages.append(patch_embed)
+                deepstack_indexes = list(getattr(vision, "deepstack_visual_indexes", []))
+                for index, block in enumerate(vision.blocks):
+                    vision_stages.append(block)
+                    if index in deepstack_indexes:
+                        vision_stages.append(mergers[deepstack_indexes.index(index)])
+                if isinstance(final_merger, nn.Module):
+                    vision_stages.append(final_merger)
+                fully_shard(vision, **vision_fsdp_kwargs)
+                # Shared parameters must stay owned by a common ancestor. A
+                # multi-module group is unsafe when its output head is unused.
+                lm_head = getattr(qwenvl, "lm_head", None)
+                if lm_head is not None and getattr(lm_head, "weight", None) is embedding.weight:
+                    logger.warning_rank0("Keeping tied input/output embeddings in the root FSDP group.")
+                else:
+                    fully_shard(embedding, **mp_fsdp_kwargs)
+                    vision_stages.append(embedding)
+                if mp_fsdp_kwargs["reshard_after_forward"] is False:
+                    # Parameters already stay resident through forward in this
+                    # mode. Queue smaller gathers early so the visual pipeline
+                    # can compute while the remaining weights arrive.
+                    vision.set_modules_to_forward_prefetch(vision_stages)
 
             fully_shard(model, **mp_fsdp_kwargs)
 
