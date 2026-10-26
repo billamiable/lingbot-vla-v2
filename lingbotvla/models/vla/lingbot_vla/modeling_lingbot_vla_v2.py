@@ -216,26 +216,14 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
         pixel_values: torch.FloatTensor,
         image_grid_thw: torch.LongTensor,
     ):
-        precompute_grid_thw = getattr(self.config, "precompute_grid_thw", False)
-        if precompute_grid_thw and self.position_embeddings is None:
-            (
-                self.pos_embeds,
-                self.position_embeddings,
-                self.cu_seqlens,
-                self.visual_split_sizes,
-                self.visual_max_seqlen,
-            ) = self.qwenvl.visual.preprcess_grid_thw(grid_thw=image_grid_thw)
+        # One explicit grid transfer, shared by position preparation and splitting.
+        # Construct cached tensors inside visual.forward, after FSDP has restored
+        # the actual compute dtype of its learned position table.
+        image_grid_cpu = image_grid_thw.detach().cpu()
         image_embeds, deepstack_image_embeds = self.qwenvl.visual(
-            pixel_values,
-            grid_thw=image_grid_thw,
-            pos_embeds=self.pos_embeds,
-            position_embeddings=self.position_embeddings,
-            cu_seqlens=self.cu_seqlens,
-            max_seqlen=self.visual_max_seqlen,
+            pixel_values, grid_thw=image_grid_cpu,
         )
-        split_sizes = self.visual_split_sizes
-        if split_sizes is None:
-            split_sizes = (image_grid_thw.prod(-1) // self.qwenvl.visual.spatial_merge_size**2).tolist()
+        split_sizes = (image_grid_cpu.prod(-1) // self.qwenvl.visual.spatial_merge_size**2).tolist()
         image_chunks = list(torch.split(image_embeds, split_sizes))
         deepstack_chunks = [
             list(torch.split(deepstack_embeds, split_sizes))
