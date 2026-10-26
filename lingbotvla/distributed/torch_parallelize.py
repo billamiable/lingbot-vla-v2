@@ -433,6 +433,43 @@ def build_parallelize_model(
                     # can compute while the remaining weights arrive.
                     vision.set_modules_to_forward_prefetch(vision_stages)
 
+                # Alignment projections prepare queries before the joint text /
+                # action backbone, while alignment heads consume its outputs.
+                # Keep these two lifetimes out of the root parameter all-gather.
+                alignment_heads = [
+                    module for name in (
+                        "depth_align_head", "future_depth_align_head",
+                        "current_video_align_head", "future_video_align_head",
+                    )
+                    if isinstance(module := getattr(model.model, name, None), nn.Module)
+                ]
+                alignment_projections = [
+                    module for name in ("current_shared_task_proj", "future_shared_task_proj")
+                    if isinstance(module := getattr(model.model, name, None), nn.Module)
+                ]
+                # Separate units tolerate optional heads not executed in a given
+                # configuration without requiring a multi-module forward group.
+                for component in [*alignment_projections, *alignment_heads]:
+                    fully_shard(component, **mp_fsdp_kwargs)
+                    if use_compile:
+                        component.forward = torch.compile(component.forward)
+                if mp_fsdp_kwargs["reshard_after_forward"] is False:
+                    # Vision parameters were already queued by the visual parent.
+                    # Launch query projections when visual computation starts.
+                    if alignment_projections:
+                        vision.blocks[0].set_modules_to_forward_prefetch(alignment_projections)
+                    if alignment_heads:
+                        # Make the immediately needed decoder parameters ready
+                        # before queueing the heads. Otherwise the heads' gathers
+                        # can simply move the initial wait into the decoder.
+                        expert_layers = model.model.qwenvl_with_expert.qwen_expert.model.layers
+                        decoder_lookahead = [expert_layers[0]]
+                        if len(llm_layers) > 1:
+                            decoder_lookahead.extend([llm_layers[1], expert_layers[1]])
+                        llm_layers[0].set_modules_to_forward_prefetch(
+                            [*decoder_lookahead, *alignment_heads]
+                        )
+
             fully_shard(model, **mp_fsdp_kwargs)
 
             if kwargs.get("init_device") == "meta":
