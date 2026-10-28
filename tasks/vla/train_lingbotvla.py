@@ -283,6 +283,11 @@ class MyTrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "Whether to apply FSDP2 for VLM."},
     )
+    fsdp_align_root: bool = field(
+        default=False,
+        metadata={"help": "Wrap root-unit params whose per-rank shard is not a multiple of 8 elements (e.g. a (55,) bias) "
+                          "in their own FSDP2 unit, so the root all-gather chunk is 16-byte aligned and NCCL copies at full width."},
+    )
 
 @dataclass
 class MyDataArguments(DataArguments):
@@ -488,6 +493,7 @@ def main():
         split_fused_experts_from_decoder_fsdp=args.train.split_fused_experts_from_decoder_fsdp,
         vlm_fsdp=args.train.vlm_fsdp,
         use_compile=args.train.use_compile,
+        fsdp_align_root=args.train.fsdp_align_root,
         use_future_image=args.data.use_future_image,
     )
     logger.info_rank0(model)
