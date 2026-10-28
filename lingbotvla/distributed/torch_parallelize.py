@@ -77,6 +77,40 @@ def verbose_fsdp_grouping(model, prefix="", depth=0):
             verbose_fsdp_grouping(child, prefix=f"{prefix}{name}.", depth=depth)
 
 
+def collect_misaligned_root_modules(model: "nn.Module", world_size: int) -> List["nn.Module"]:
+    """Modules owning a root-unit parameter whose per-rank FSDP2 shard is not 16-byte aligned.
+
+    FSDP2 all-gathers a unit's shards as one flat buffer per rank, and rank r's chunk starts at
+    r * chunk_bytes in the output. NCCL falls back to narrow copies when that chunk is not a
+    multiple of 16 bytes (about 6x slower for a large unit; with the vision encoder and alignment
+    modules in their own units the root is ~9 MB and the loss is a few ms per step). A
+    parameter of dim0 d contributes ceil(d / world_size) rows to the chunk, so e.g. a (55,) bias
+    adds 7 elements and misaligns the whole unit. Wrapping its owner in its own small FSDP2
+    unit keeps the root chunk a multiple of 8 elements (16 bytes in bf16, 32 in fp32).
+    Must run after the child units are sharded: their parameters are DTensors by then.
+    Returned children first, so they can be sharded in order.
+    """
+    from torch.distributed.tensor import DTensor
+
+    modules = []
+    for name, module in model.named_modules():
+        if module is model:
+            continue
+        for param_name, param in module.named_parameters(recurse=False):
+            if isinstance(param, DTensor) or param.dim() == 0:
+                continue
+            chunk = -(-param.size(0) // world_size) * param[0].numel()
+            if chunk % 8:
+                numel = sum(p.numel() for p in module.parameters() if not isinstance(p, DTensor))
+                logger.info_rank0(
+                    f"fsdp_align_root: {name}.{param_name} {tuple(param.shape)} shards to {chunk} elements per "
+                    f"rank; wrapping {name} ({numel:,} parameters) as its own FSDP2 unit."
+                )
+                modules.append(module)
+                break
+    return modules[::-1]
+
+
 def build_parallelize_model(
     model: "nn.Module",
     weights_path: Optional[str] = None,
@@ -92,6 +126,7 @@ def build_parallelize_model(
     split_fused_experts_from_decoder_fsdp: bool = False,
     vlm_fsdp: bool = False,
     use_compile: bool = False,
+    fsdp_align_root: bool = False,
     **kwargs,
 ) -> "nn.Module":
     """
@@ -469,6 +504,10 @@ def build_parallelize_model(
                         llm_layers[0].set_modules_to_forward_prefetch(
                             [*decoder_lookahead, *alignment_heads]
                         )
+
+            if fsdp_align_root:
+                for module in collect_misaligned_root_modules(model, parallel_state.fsdp_mesh.size()):
+                    fully_shard(module, **mp_fsdp_kwargs)
 
             fully_shard(model, **mp_fsdp_kwargs)
 
