@@ -1,0 +1,18 @@
+{
+  "run": "smoke_opt_noac16",
+  "code": "opt",
+  "steps": 5,
+  "returncode": 0,
+  "rank_records": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "passed": true,
+  "wall_seconds": 101.44313716888428
+}

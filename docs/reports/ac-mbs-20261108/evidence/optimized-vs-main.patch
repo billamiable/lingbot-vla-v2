@@ -1,0 +1,2304 @@
+diff --git a/lingbotvla/data/vla_data/multi_vla_dataset.py b/lingbotvla/data/vla_data/multi_vla_dataset.py
+index e6f0e14..ece1b14 100644
+--- a/lingbotvla/data/vla_data/multi_vla_dataset.py
++++ b/lingbotvla/data/vla_data/multi_vla_dataset.py
+@@ -109,6 +109,8 @@ class MultiVLADataset(Dataset):
+             dataset_start_index.append(start_index)
+             start_index += dataset.dataset.num_frames
+         self.dataset_start_index = dataset_start_index
++        # Set by the teacher cache so that each sample reports which index it was loaded from.
++        self.return_sample_index = False
+ 
+ 
+     @property
+@@ -140,6 +142,8 @@ class MultiVLADataset(Dataset):
+             item[0]['rep_id'] = dataset.data_name
+         else:
+             item['rep_id'] = dataset.data_name
++            if self.return_sample_index:
++                item['sample_index'] = idx
+         
+         return item
+ 
+diff --git a/lingbotvla/data/vla_data/teacher_cache.py b/lingbotvla/data/vla_data/teacher_cache.py
+new file mode 100644
+index 0000000..8a1ff54
+--- /dev/null
++++ b/lingbotvla/data/vla_data/teacher_cache.py
+@@ -0,0 +1,251 @@
++"""Offline cache of the frozen teacher targets used for depth / video alignment.
++
++The three teachers (MoGe2 + MoRGBD for depth, DINO video) are frozen and their inputs only
++depend on the sample (image augmentation off, future frame at a fixed offset), so their
++targets can be computed once and read back by the data loader instead of running the teachers
++every step.
++
++Layout of a cache directory, one row per sample index of the training dataset:
++
++    depth.npy           [N, T, D]  current-frame depth target (bf16 bits stored as int16)
++    video_current.npy   [N, T, D]  DINO patch target of the current frame
++    video_future.npy    [N, T, D]  DINO patch target of the future frame
++    future_index.npy    [N]        sample index whose current frame is this sample's future
++                                   frame; the future depth target is depth[future_index]
++    done.npy            [N]        1 once a row has been written
++    meta.json                      dataset / teacher fingerprint, checked when reading
++
++The future frame is clamped to the last frame of the episode exactly as LeRobot does for
++delta timestamps, so the future depth target needs no row of its own.
++"""
++
++import json
++import os
++import time
++from typing import Callable, Dict, Optional
++
++import numpy as np
++import torch
++from torch.utils.data import DataLoader, Dataset
++
++from lingbotvla.utils import helper
++
++logger = helper.create_logger(__name__)
++
++TARGET_KEYS = ("depth", "video_current", "video_future")
++# Keys added to every sample by TeacherCacheDataset; the training loop pops them.
++BATCH_KEYS = {
++    "depth": "teacher_depth",
++    "future_depth": "teacher_future_depth",
++    "video_current": "teacher_video_current",
++    "video_future": "teacher_video_future",
++}
++
++
++def future_frame_offset(multi_dataset) -> int:
++    offsets = {round(d.chunk_size - 1) for d in multi_dataset._datasets}
++    assert len(offsets) == 1, f"datasets disagree on the future frame offset: {offsets}"
++    return offsets.pop()
++
++
++def compute_future_index(multi_dataset) -> np.ndarray:
++    """Sample index of each sample's future frame, clamped to its episode like LeRobot does."""
++    offset = future_frame_offset(multi_dataset)
++    out = np.empty(len(multi_dataset), dtype=np.int64)
++    for start, sub in zip(multi_dataset.dataset_start_index, multi_dataset._datasets):
++        episodes = sub.dataset.meta.episodes
++        for ep_from, ep_to in zip(episodes["dataset_from_index"], episodes["dataset_to_index"]):
++            local = np.arange(ep_from, ep_to)
++            out[start + local] = start + np.minimum(local + offset, ep_to - 1)
++    return out
++
++
++def fingerprint(multi_dataset, align_params, image_augment: bool, cameras) -> Dict:
++    return {
++        "datasets": [[sub.dataset.repo_id, int(sub.dataset.num_frames)] for sub in multi_dataset._datasets],
++        "future_frame_offset": future_frame_offset(multi_dataset),
++        "image_augment": bool(image_augment),
++        # The teachers only see the first camera, so the order matters.
++        "cameras": list(cameras or []),
++        "moge_path": align_params["depth"]["moge_path"],
++        "morgbd_path": align_params["depth"]["morgbd_path"],
++        "video_ckpt_path": align_params["video"]["ckpt_path"],
++        "video_input_size": align_params["video"].get("input_size"),
++        "video_use_warmup_frame": align_params["video"].get("use_warmup_frame"),
++    }
++
++
++def _to_int16(t: torch.Tensor) -> np.ndarray:
++    assert t.dtype == torch.bfloat16, t.dtype
++    return t.contiguous().view(torch.int16).cpu().numpy()
++
++
++class TeacherCache:
++    """Read-only view of a cache directory. Memory maps are opened lazily, once per process,
++    so that each data loader worker gets its own file handles after fork."""
++
++    def __init__(self, cache_dir: str, expected_meta: Optional[Dict] = None):
++        self.cache_dir = cache_dir
++        with open(os.path.join(cache_dir, "meta.json")) as f:
++            self.meta = json.load(f)
++        if expected_meta is not None and self.meta["fingerprint"] != expected_meta:
++            raise ValueError(
++                f"teacher cache {cache_dir} was built for different data or teachers:\n"
++                f"  cache:    {self.meta['fingerprint']}\n  expected: {expected_meta}"
++            )
++        done = np.load(os.path.join(cache_dir, "done.npy"))
++        if not done.all():
++            raise ValueError(f"teacher cache {cache_dir} is incomplete: {int((done == 0).sum())} rows missing")
++        self._arrays = None
++
++    def __len__(self):
++        return self.meta["num_samples"]
++
++    def _open(self):
++        if self._arrays is None:
++            self._arrays = {
++                key: np.load(os.path.join(self.cache_dir, f"{key}.npy"), mmap_mode="r")
++                for key in (*TARGET_KEYS, "future_index")
++            }
++        return self._arrays
++
++    def get(self, index: int) -> Dict[str, torch.Tensor]:
++        arrays = self._open()
++        rows = {
++            "depth": arrays["depth"][index],
++            "future_depth": arrays["depth"][int(arrays["future_index"][index])],
++            "video_current": arrays["video_current"][index],
++            "video_future": arrays["video_future"][index],
++        }
++        return {
++            BATCH_KEYS[key]: torch.from_numpy(np.array(row)).view(torch.bfloat16) for key, row in rows.items()
++        }
++
++
++class TeacherCacheDataset(Dataset):
++    """Adds the cached teacher targets to every sample of a MultiVLADataset and drops the
++    teacher input images, which are then no longer needed."""
++
++    def __init__(self, dataset, cache: TeacherCache, keep_teacher_images: bool = False):
++        assert len(cache) == len(dataset), f"cache has {len(cache)} rows, dataset {len(dataset)}"
++        self.dataset = dataset
++        self.cache = cache
++        self.keep_teacher_images = keep_teacher_images
++        dataset.return_sample_index = True
++
++    def __len__(self):
++        return len(self.dataset)
++
++    def __getitem__(self, idx):
++        item = self.dataset[idx]
++        # The dataset may substitute another sample when one fails to load, so use the index it
++        # reports rather than idx.
++        item.update(self.cache.get(item.pop("sample_index")))
++        if not self.keep_teacher_images:
++            item.pop("pil_images", None)
++            item.pop("future_pil_images", None)
++        return item
++
++
++class _IndexedSubset(Dataset):
++    def __init__(self, dataset, indices):
++        self.dataset = dataset
++        self.indices = indices
++
++    def __len__(self):
++        return len(self.indices)
++
++    def __getitem__(self, i):
++        return self.dataset[int(self.indices[i])]
++
++
++def build_teacher_cache(
++    dataset,
++    compute_targets: Callable[[Dict], Dict[str, torch.Tensor]],
++    cache_dir: str,
++    meta: Dict,
++    rank: int,
++    world_size: int,
++    batch_size: int,
++    num_workers: int,
++    collate_fn,
++    barrier: Callable[[], None],
++):
++    """Run the teachers over every sample once and write the targets to cache_dir.
++
++    Each rank takes a contiguous slice of sample indices. compute_targets maps a collated batch
++    (on GPU) to {"depth", "video_current", "video_future"} bf16 tensors of shape [B, T, D].
++    Rows already marked done are skipped, so an interrupted build can be resumed.
++
++    Every batch has exactly batch_size samples: the compiled depth teacher picks kernels by batch
++    size, so a smaller last batch gives bf16 results a little off from training, which always runs
++    the teachers on micro batches of batch_size. The last batch is padded by repeating its final
++    sample; which samples share a batch does not change the result.
++    """
++    n = len(dataset)
++    dataset.return_sample_index = True
++    os.makedirs(cache_dir, exist_ok=True)
++    done_path = os.path.join(cache_dir, "done.npy")
++
++    # Rank 0 sizes the files from one batch, then every rank opens them for writing.
++    if rank == 0 and not os.path.exists(done_path):
++        probe = collate_fn([dataset[i] for i in range(batch_size)])
++        probe = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in probe.items()}
++        shapes = {k: tuple(v.shape[1:]) for k, v in compute_targets(probe).items()}
++        for key in TARGET_KEYS:
++            np.lib.format.open_memmap(
++                os.path.join(cache_dir, f"{key}.npy"), mode="w+", dtype=np.int16, shape=(n, *shapes[key])
++            )
++        np.save(os.path.join(cache_dir, "future_index.npy"), compute_future_index(dataset))
++        np.save(done_path, np.zeros(n, dtype=np.uint8))
++        with open(os.path.join(cache_dir, "meta.json"), "w") as f:
++            json.dump({"num_samples": n, "shapes": shapes, "fingerprint": meta}, f, indent=2)
++    barrier()
++    with open(os.path.join(cache_dir, "meta.json")) as f:
++        if json.load(f)["fingerprint"] != meta:
++            raise ValueError(f"{cache_dir} holds a cache of different data or teachers")
++
++    arrays = {key: np.load(os.path.join(cache_dir, f"{key}.npy"), mmap_mode="r+") for key in TARGET_KEYS}
++    done = np.load(done_path)
++    lo, hi = n * rank // world_size, n * (rank + 1) // world_size
++    todo = np.arange(lo, hi)[done[lo:hi] == 0]
++    if len(todo) % batch_size:
++        todo = np.concatenate([todo, np.full(batch_size - len(todo) % batch_size, todo[-1])])
++    my_done = np.zeros(n, dtype=np.uint8)
++    my_done[lo:hi] = done[lo:hi]
++    logger.info(f"rank {rank}: samples [{lo}, {hi}), {len(todo)} to compute")
++
++    loader = DataLoader(
++        _IndexedSubset(dataset, todo),
++        batch_size=batch_size,
++        shuffle=False,
++        num_workers=num_workers,
++        collate_fn=collate_fn,
++        pin_memory=True,
++        prefetch_factor=4 if num_workers > 0 else None,
++    )
++    start, written = time.time(), 0
++    for batch in loader:
++        index = batch.pop("sample_index").numpy()
++        batch = {k: v.cuda(non_blocking=True) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
++        targets = compute_targets(batch)
++        for key in TARGET_KEYS:
++            arrays[key][index] = _to_int16(targets[key])
++        my_done[index] = 1
++        written += len(np.unique(index))
++        if rank == 0 and written % (50 * batch_size) < len(index):
++            rate = written / (time.time() - start)
++            logger.info(f"rank 0: {written}/{len(todo)} samples, {rate:.1f} samples/s per rank")
++    for arr in arrays.values():
++        arr.flush()
++    np.save(os.path.join(cache_dir, f"done.rank{rank}.npy"), my_done[lo:hi])
++    barrier()
++    if rank == 0:
++        for r in range(world_size):
++            r_lo, r_hi = n * r // world_size, n * (r + 1) // world_size
++            path = os.path.join(cache_dir, f"done.rank{r}.npy")
++            done[r_lo:r_hi] = np.load(path)
++            os.remove(path)
++        np.save(done_path, done)
++        logger.info(f"teacher cache {cache_dir}: {int(done.sum())}/{n} rows written in {time.time() - start:.0f}s")
++    barrier()
+diff --git a/lingbotvla/distributed/fsdp_layer_comm.py b/lingbotvla/distributed/fsdp_layer_comm.py
+new file mode 100644
+index 0000000..2891452
+--- /dev/null
++++ b/lingbotvla/distributed/fsdp_layer_comm.py
+@@ -0,0 +1,170 @@
++"""Scheduling helpers for the per-layer FSDP2 units of the joint VLM / action-expert stack.
++
++I. no_reshard_after_backward: keep each layer's unsharded parameters through the whole backward so the second
++   (qkv) call's backward does not re-all-gather them. The caller must call after_backward() after every
++   loss.backward(), before clip_grad_norm_ / optimizer.step(): it drains the reduce-scatter queue (when
++   ReduceScatterInflight is installed) and reshards the layers.
++H. forward prefetch depth k: before the forward of every micro-batch, all-gather the first k layers of both towers;
++   inside the layer loop FSDP keeps a lookahead of k via set_modules_to_forward_prefetch, so the all-gather chain runs
++   ~k*14 ms ahead of the compute. The caller decides when the prologue runs: at the start of the micro-batch, so its
++   all-gathers overlap the online teacher models, or right before the model forward. In the second case prefix_units
++   (the root and the units the forward calls before the layers, in call order) are all-gathered first, so the layers'
++   all-gathers run under the ViT / prefix compute and none of the prefix units queues behind them (the NCCL
++   communicator runs collectives in issue order).
++J. reduce-scatters in flight: let up to D of FSDP2's backward reduce-scatters be in flight instead of one
++   (ReduceScatterInflight below); after_backward() drains the queue.
++"""
++import collections
++import inspect
++from typing import List, Optional
++
++import torch
++from torch.distributed.fsdp import FSDPModule
++from torch.distributed.fsdp._fully_shard import _fsdp_param_group as _pg
++
++
++class ReduceScatterInflight:
++    """Let up to `depth` FSDP2 reduce-scatters be in flight instead of one.
++
++    FSDP2's FSDPParamGroup.post_backward makes the compute stream wait, before issuing a reduce-scatter, for
++    (a) the previous reduce-scatter (any group) so that its input buffer can be freed, and
++    (b) this group's previous post-reduce event.
++    Both are stream-ordering safety waits, not data dependencies: the RS inputs are only read on the RS stream, and
++    the per-group gradient accumulation happens on the RS stream in issue order.  We take the two objects out of
++    FSDP's hands before the original post_backward runs (so it finds nothing to wait for), keep them in a FIFO, and
++    only when more than `depth - 1` are pending do we make the compute stream wait for the oldest and drop it
++    (freeing its input).  `drain()` must run after loss.backward() and before anything reads gradients.
++    The FIFO counts post_backward calls that had something to move, including calls that do not reduce (FSDP2's
++    end-of-backward calls for units whose hook did not run); at depth 1 every wait FSDP2 makes still happens, possibly
++    earlier.
++    """
++
++    def __init__(self, depth: int):
++        if depth < 1:
++            raise ValueError(f"reduce-scatter depth must be >= 1, got {depth}")
++        self.depth = int(depth)
++        self.pending: collections.deque = collections.deque()   # [(ReduceScatterState | None, post_reduce_event | None)]
++        self.max_pending = 0
++
++    @staticmethod
++    def check(groups) -> None:
++        """Raise unless the deferred waits are safe: torch 2.8's post_backward, and for every FSDPParamGroup no HSDP
++        all-reduce and no all-reduce hook (so the post-reduce runs on the reduce-scatter stream), reduce-scatter
++        buffers from the caching allocator and no CPU offload."""
++        if not torch.__version__.startswith("2.8."):
++            raise RuntimeError(f"fsdp_rs_inflight_depth > 1 defers waits inside FSDP2's FSDPParamGroup.post_backward, "
++                               f"which was validated against torch 2.8 only; this is torch {torch.__version__}")
++        src = inspect.getsource(_pg.FSDPParamGroup.post_backward)
++        if "reduce_scatter_state" not in src or "_wait_for_post_backward" not in src:
++            raise RuntimeError("FSDP2's FSDPParamGroup.post_backward does not match torch 2.8's (or is wrapped already): "
++                               "cannot install the reduce-scatter queue")
++        for g in groups:
++            unsupported = [what for what, bad in (
++                ("HSDP", g._is_hsdp),
++                ("an all-reduce hook", g._all_reduce_hook is not None),
++                ("reduce-scatter buffers from the process group", g.allocate_memory_from_process_group),
++                ("CPU offload", any(getattr(p, "offload_to_cpu", False) for p in g.fsdp_params)),
++            ) if bad]
++            if unsupported:
++                raise ValueError(f"fsdp_rs_inflight_depth > 1 does not support {' / '.join(unsupported)} "
++                                 f"(FSDP2 unit of {type(g.modules[0]).__name__})")
++
++    def install(self, groups) -> None:
++        """Check `groups` (every FSDP2 parameter group in the process: the patch is class-wide), then wrap
++        FSDPParamGroup.post_backward. Once per process."""
++        if getattr(_pg.FSDPParamGroup, "_lingbot_rs_inflight_installed", False):
++            raise RuntimeError("ReduceScatterInflight installed twice")
++        self.check(groups)
++        orig = _pg.FSDPParamGroup.post_backward
++        inflight = self
++
++        def post_backward(group, *unused):
++            ctx = group.comm_ctx
++            prev_state, ctx.reduce_scatter_state = ctx.reduce_scatter_state, None     # (a)
++            prev_evt, group._post_reduce_event = group._post_reduce_event, None       # (b)
++            if prev_state is not None or prev_evt is not None:
++                inflight.pending.append((prev_state, prev_evt))
++                inflight.max_pending = max(inflight.max_pending, len(inflight.pending))
++            while len(inflight.pending) > inflight.depth - 1:
++                inflight._wait_oldest()
++            return orig(group, *unused)
++
++        _pg.FSDPParamGroup.post_backward = post_backward
++        _pg.FSDPParamGroup._lingbot_rs_inflight_installed = True
++
++    def _wait_oldest(self) -> None:
++        state, evt = self.pending.popleft()
++        cur = torch.cuda.current_stream()
++        if state is not None and state.event is not None:
++            cur.wait_event(state.event)
++        if evt is not None:
++            cur.wait_event(evt)
++        # dropping `state` here frees the reduce-scatter input, ordered after the RS on the compute stream
++
++    def drain(self) -> None:
++        """After loss.backward(), before clip / optimizer: wait for everything still pending."""
++        while self.pending:
++            self._wait_oldest()
++
++
++class LayerCommScheduler:
++    def __init__(self, vlm_layers: List[torch.nn.Module], expert_layers: List[torch.nn.Module],
++                 prefetch_depth: int = 0, no_reshard_after_backward: bool = False,
++                 prefix_units: Optional[List[torch.nn.Module]] = None, rs_inflight_depth: int = 1):
++        if len(vlm_layers) != len(expert_layers):
++            raise ValueError(f"{len(vlm_layers)} VLM layers but {len(expert_layers)} expert layers")
++        for m in list(vlm_layers) + list(expert_layers) + list(prefix_units or []):
++            if not isinstance(m, FSDPModule):
++                raise ValueError(f"{type(m).__name__} is not an FSDP2 module")
++        self.vlm, self.exp = list(vlm_layers), list(expert_layers)
++        self.n = len(self.vlm)
++        self.depth = int(prefetch_depth)
++        self.no_reshard = bool(no_reshard_after_backward)
++        self.prefix = list(prefix_units or [])
++        self.rs_inflight_depth = int(rs_inflight_depth)
++        if not 0 <= self.depth < self.n:
++            raise ValueError(f"fsdp_forward_prefetch_depth must be in [0, {self.n - 1}] for {self.n} layers, got {self.depth}")
++        if self.rs_inflight_depth < 1:
++            raise ValueError(f"fsdp_rs_inflight_depth must be >= 1, got {self.rs_inflight_depth}")
++        self.rs_inflight: Optional[ReduceScatterInflight] = None
++
++    # ---- one-time configuration, right after build_parallelize_model
++    def configure(self, all_groups=()) -> None:
++        """all_groups: every FSDPParamGroup in the process, checked before the class-wide post_backward wrapper is
++        installed (only used when rs_inflight_depth > 1)."""
++        if self.no_reshard:
++            for m in self.vlm + self.exp:
++                m.set_reshard_after_backward(False, recurse=False)
++        if self.depth > 0:
++            for i in range(self.n - self.depth):
++                # issued in layer i's pre-forward (its first call, compute_kqv=True), on FSDP's own all-gather streams;
++                # appended to a list build_parallelize_model may have set (vlm layer 0 prefetches its expert, layer 1 and
++                # the align heads), whose all-gathers of units the prologue already unsharded are no-ops
++                ahead = [self.vlm[i + self.depth], self.exp[i + self.depth]]
++                current = [s._modules[0] for s in self.vlm[i]._get_fsdp_state()._states_to_forward_prefetch]
++                self.vlm[i].set_modules_to_forward_prefetch(current + [m for m in ahead if not any(m is c for c in current)])
++        if self.rs_inflight_depth > 1:
++            groups = [m._get_fsdp_state()._fsdp_param_group for m in self.vlm + self.exp]
++            seen = {id(g) for g in groups}
++            groups += [g for g in all_groups if id(g) not in seen]
++            self.rs_inflight = ReduceScatterInflight(self.rs_inflight_depth)
++            self.rs_inflight.install(groups)
++
++    # ---- H: start of every forward (micro-batch). The callers skip global step 1 (not required: after a resume the
++    #      first call runs before FSDP's lazy init, which FSDPModule.unshard supports)
++    def prologue(self) -> None:
++        if self.depth == 0:
++            return
++        for m in self.prefix:
++            m.unshard(async_op=True)
++        for i in range(self.depth):
++            self.vlm[i].unshard(async_op=True)
++            self.exp[i].unshard(async_op=True)
++
++    # ---- I: right after loss.backward(), before clip / optimizer.step()
++    def after_backward(self) -> None:
++        if self.rs_inflight is not None:
++            self.rs_inflight.drain()
++        if self.no_reshard:
++            for m in self.vlm + self.exp:
++                m.reshard()
+diff --git a/lingbotvla/distributed/torch_parallelize.py b/lingbotvla/distributed/torch_parallelize.py
+index 5db3bb9..d6e8ffc 100644
+--- a/lingbotvla/distributed/torch_parallelize.py
++++ b/lingbotvla/distributed/torch_parallelize.py
+@@ -77,6 +77,40 @@ def verbose_fsdp_grouping(model, prefix="", depth=0):
+             verbose_fsdp_grouping(child, prefix=f"{prefix}{name}.", depth=depth)
+ 
+ 
++def collect_misaligned_root_modules(model: "nn.Module", world_size: int) -> List["nn.Module"]:
++    """Modules owning a root-unit parameter whose per-rank FSDP2 shard is not 16-byte aligned.
++
++    FSDP2 all-gathers a unit's shards as one flat buffer per rank, and rank r's chunk starts at
++    r * chunk_bytes in the output. NCCL falls back to narrow copies when that chunk is not a
++    multiple of 16 bytes (about 6x slower for a large unit; with the vision encoder and alignment
++    modules in their own units the root is ~9 MB and the loss is a few ms per step). A
++    parameter of dim0 d contributes ceil(d / world_size) rows to the chunk, so e.g. a (55,) bias
++    adds 7 elements and misaligns the whole unit. Wrapping its owner in its own small FSDP2
++    unit keeps the root chunk a multiple of 8 elements (16 bytes in bf16, 32 in fp32).
++    Must run after the child units are sharded: their parameters are DTensors by then.
++    Returned children first, so they can be sharded in order.
++    """
++    from torch.distributed.tensor import DTensor
++
++    modules = []
++    for name, module in model.named_modules():
++        if module is model:
++            continue
++        for param_name, param in module.named_parameters(recurse=False):
++            if isinstance(param, DTensor) or param.dim() == 0:
++                continue
++            chunk = -(-param.size(0) // world_size) * param[0].numel()
++            if chunk % 8:
++                numel = sum(p.numel() for p in module.parameters() if not isinstance(p, DTensor))
++                logger.info_rank0(
++                    f"fsdp_align_root: {name}.{param_name} {tuple(param.shape)} shards to {chunk} elements per "
++                    f"rank; wrapping {name} ({numel:,} parameters) as its own FSDP2 unit."
++                )
++                modules.append(module)
++                break
++    return modules[::-1]
++
++
+ def build_parallelize_model(
+     model: "nn.Module",
+     weights_path: Optional[str] = None,
+@@ -91,6 +125,8 @@ def build_parallelize_model(
+     use_depth_align: bool = False,
+     split_fused_experts_from_decoder_fsdp: bool = False,
+     vlm_fsdp: bool = False,
++    use_compile: bool = False,
++    fsdp_align_root: bool = False,
+     **kwargs,
+ ) -> "nn.Module":
+     """
+@@ -363,6 +399,116 @@ def build_parallelize_model(
+                         logger.info_rank0(f"Apply FSDP2 to {layer.__class__.__name__}.")
+                         fully_shard(layer, **mp_fsdp_kwargs)
+ 
++                # Decoder-only traversal leaves the entire vision transformer and
++                # token table in the root all-gather. Apply FSDP bottom-up to the
++                # vision blocks, their remaining stem/mergers, and token table too.
++                qwenvl = model.model.qwenvl_with_expert.qwenvl
++                vision, vision_path = _resolve(qwenvl, [("model", "visual"), ("visual",)])
++                embedding, embedding_path = _resolve(qwenvl, [
++                    ("model", "language_model", "embed_tokens"),
++                    ("model", "embed_tokens"),
++                    ("language_model", "model", "embed_tokens"),
++                ])
++                if vision is None or not isinstance(getattr(vision, "blocks", None), nn.ModuleList):
++                    raise RuntimeError("Could not locate the Qwen-VL vision transformer blocks for FSDP2.")
++                if not isinstance(embedding, nn.Embedding):
++                    raise RuntimeError("Could not locate the Qwen-VL token embedding for FSDP2.")
++                logger.info_rank0(
++                    f"FSDP2 sharding vision via {vision_path}, n_blocks={len(vision.blocks)}; "
++                    f"token embedding via {embedding_path}"
++                )
++                # Rotary tensors are computed inside the outer model in FP32.
++                # New FSDP boundaries must not downcast these auxiliary inputs.
++                policy = mp_fsdp_kwargs["mp_policy"]
++                vision_fsdp_kwargs = dict(mp_fsdp_kwargs, mp_policy=MixedPrecisionPolicy(
++                    param_dtype=policy.param_dtype,
++                    reduce_dtype=policy.reduce_dtype,
++                    output_dtype=policy.output_dtype,
++                    cast_forward_inputs=False,
++                ))
++                for block in vision.blocks:
++                    fully_shard(block, **vision_fsdp_kwargs)
++                    if use_compile:
++                        # Compile the math inside FSDP/checkpoint hooks so the
++                        # new boundaries retain the original vision fusions.
++                        block.forward = torch.compile(block.forward)
++                # Keep positional embeddings in the visual parent: the HF
++                # interpolator inspects their dtype before calling the embedding.
++                # Stems and mergers are real forward modules and can be sharded.
++                vision_stages = []
++                patch_embed = getattr(vision, "patch_embed", None)
++                mergers = list(getattr(vision, "deepstack_merger_list", []))
++                final_merger = getattr(vision, "merger", None)
++                for component in [patch_embed, *mergers, final_merger]:
++                    if isinstance(component, nn.Module):
++                        fully_shard(component, **vision_fsdp_kwargs)
++                        if use_compile:
++                            component.forward = torch.compile(component.forward)
++                if isinstance(patch_embed, nn.Module):
++                    vision_stages.append(patch_embed)
++                deepstack_indexes = list(getattr(vision, "deepstack_visual_indexes", []))
++                for index, block in enumerate(vision.blocks):
++                    vision_stages.append(block)
++                    if index in deepstack_indexes:
++                        vision_stages.append(mergers[deepstack_indexes.index(index)])
++                if isinstance(final_merger, nn.Module):
++                    vision_stages.append(final_merger)
++                fully_shard(vision, **vision_fsdp_kwargs)
++                # Shared parameters must stay owned by a common ancestor. A
++                # multi-module group is unsafe when its output head is unused.
++                lm_head = getattr(qwenvl, "lm_head", None)
++                if lm_head is not None and getattr(lm_head, "weight", None) is embedding.weight:
++                    logger.warning_rank0("Keeping tied input/output embeddings in the root FSDP group.")
++                else:
++                    fully_shard(embedding, **mp_fsdp_kwargs)
++                    vision_stages.append(embedding)
++                if mp_fsdp_kwargs["reshard_after_forward"] is False:
++                    # Parameters already stay resident through forward in this
++                    # mode. Queue smaller gathers early so the visual pipeline
++                    # can compute while the remaining weights arrive.
++                    vision.set_modules_to_forward_prefetch(vision_stages)
++
++                # Alignment projections prepare queries before the joint text /
++                # action backbone, while alignment heads consume its outputs.
++                # Keep these two lifetimes out of the root parameter all-gather.
++                alignment_heads = [
++                    module for name in (
++                        "depth_align_head", "future_depth_align_head",
++                        "current_video_align_head", "future_video_align_head",
++                    )
++                    if isinstance(module := getattr(model.model, name, None), nn.Module)
++                ]
++                alignment_projections = [
++                    module for name in ("current_shared_task_proj", "future_shared_task_proj")
++                    if isinstance(module := getattr(model.model, name, None), nn.Module)
++                ]
++                # Separate units tolerate optional heads not executed in a given
++                # configuration without requiring a multi-module forward group.
++                for component in [*alignment_projections, *alignment_heads]:
++                    fully_shard(component, **mp_fsdp_kwargs)
++                    if use_compile:
++                        component.forward = torch.compile(component.forward)
++                if mp_fsdp_kwargs["reshard_after_forward"] is False:
++                    # Vision parameters were already queued by the visual parent.
++                    # Launch query projections when visual computation starts.
++                    if alignment_projections:
++                        vision.blocks[0].set_modules_to_forward_prefetch(alignment_projections)
++                    if alignment_heads:
++                        # Make the immediately needed decoder parameters ready
++                        # before queueing the heads. Otherwise the heads' gathers
++                        # can simply move the initial wait into the decoder.
++                        expert_layers = model.model.qwenvl_with_expert.qwen_expert.model.layers
++                        decoder_lookahead = [expert_layers[0]]
++                        if len(llm_layers) > 1:
++                            decoder_lookahead.extend([llm_layers[1], expert_layers[1]])
++                        llm_layers[0].set_modules_to_forward_prefetch(
++                            [*decoder_lookahead, *alignment_heads]
++                        )
++
++            if fsdp_align_root:
++                for module in collect_misaligned_root_modules(model, parallel_state.fsdp_mesh.size()):
++                    fully_shard(module, **mp_fsdp_kwargs)
++
+             fully_shard(model, **mp_fsdp_kwargs)
+ 
+             if kwargs.get("init_device") == "meta":
+diff --git a/lingbotvla/models/vla/lingbot_vla/configuration_lingbot_vla.py b/lingbotvla/models/vla/lingbot_vla/configuration_lingbot_vla.py
+index d02383e..6c01c3d 100644
+--- a/lingbotvla/models/vla/lingbot_vla/configuration_lingbot_vla.py
++++ b/lingbotvla/models/vla/lingbot_vla/configuration_lingbot_vla.py
+@@ -84,6 +84,9 @@ class LingbotVLAConfig(PretrainedConfig):
+         qwen3vl_use_vision_boundaries: bool = False,
+         precompute_grid_thw: bool = False,
+         use_qwen3_fixed_grid_cache: bool = False,
++        fused_joint_qkv_prep: bool = False,
++        fused_joint_attn_split: bool = False,
++        attention_dtype: str = "fp32",
+ 
+         use_lm_head: bool = False,
+         vocab_size: int = 0,
+@@ -166,6 +169,11 @@ class LingbotVLAConfig(PretrainedConfig):
+         self.qwen3vl_use_vision_boundaries = qwen3vl_use_vision_boundaries
+         self.precompute_grid_thw = precompute_grid_thw
+         self.use_qwen3_fixed_grid_cache = use_qwen3_fixed_grid_cache
++        # --train.fused_joint_qkv_prep / fused_joint_attn_split / attention_dtype; only declared arguments are kept
++        # (super().__init__() gets no kwargs)
++        self.fused_joint_qkv_prep = fused_joint_qkv_prep
++        self.fused_joint_attn_split = fused_joint_attn_split
++        self.attention_dtype = attention_dtype
+         self.use_lm_head = use_lm_head
+         if vocab_size == 0:
+             if vlm_repo_id and 'paligemma' in vlm_repo_id.lower():
+diff --git a/lingbotvla/models/vla/lingbot_vla/flex_attention.py b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+index 7fbc512..913ee7d 100644
+--- a/lingbotvla/models/vla/lingbot_vla/flex_attention.py
++++ b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+@@ -19,6 +19,13 @@ import einops
+ 
+ FLEX_SPARSE_BLOCK_SIZE = 128
+ FLEX_KERNEL_OPTIONS = {"BLOCK_M": 32, "BLOCK_N": 64, "num_warps": 4, "num_stages": 2}
++# bf16 Q/K/V (--train.attention_dtype bf16): for bf16 / head_dim 128 on compute capability >= 9.0 Inductor gives the
++# backward H100's tile (64 x 128), which with the num_stages / num_warps above needs 103936 B of shared memory per
++# block; sm_120 has 101376 B, so the backward would not compile. It gets the forward's tile instead (dK/dV 32 x 64,
++# dQ 64 x 32). fp32 keeps the options above.
++FLEX_KERNEL_OPTIONS_BF16 = {
++    **FLEX_KERNEL_OPTIONS, "bwd_BLOCK_M1": 32, "bwd_BLOCK_N1": 64, "bwd_BLOCK_M2": 64, "bwd_BLOCK_N2": 32,
++}
+ 
+ if Version(torch.__version__) > Version("2.5.0"):
+     # Ffex attention is only available from torch 2.5 onwards
+@@ -136,10 +143,13 @@ def build_block_mask(
+     q_len: int,
+     kv_len: int,
+     block_size: int = FLEX_SPARSE_BLOCK_SIZE,
++    pad_to_block: bool = True,
+ ):
+     """
+     Build a reusable BlockMask from a 3D attention mask [B, Q, KV].
+     This allocates the dense 4D mask once; the returned BlockMask can be reused across layers.
++    pad_to_block=False builds it for q_len/kv_len as they are, for q/k/v that are not padded to a block multiple
++    (torch 2.8 flex handles lengths that are not multiples of the block size).
+     """
+     from torch.nn.attention.flex_attention import (
+         _mask_mod_signature,
+@@ -151,12 +161,16 @@ def build_block_mask(
+     causal_mask = attention_mask_3d[:, None, :, :].expand(-1, num_heads, -1, -1).contiguous()
+     b_mask, h_mask = causal_mask.shape[0], causal_mask.shape[1]
+ 
+-    q_len_rounded = _round_up_to_multiple(q_len, block_size)
+-    kv_len_rounded = _round_up_to_multiple(kv_len, block_size)
++    if pad_to_block:
++        q_len_rounded = _round_up_to_multiple(q_len, block_size)
++        kv_len_rounded = _round_up_to_multiple(kv_len, block_size)
+ 
+-    pad_q = q_len_rounded - q_len
+-    pad_k = kv_len_rounded - kv_len
+-    padded_mask = F.pad(causal_mask, (0, pad_k, 0, pad_q), value=0.0)
++        pad_q = q_len_rounded - q_len
++        pad_k = kv_len_rounded - kv_len
++        padded_mask = F.pad(causal_mask, (0, pad_k, 0, pad_q), value=0.0)
++    else:
++        q_len_rounded, kv_len_rounded = q_len, kv_len
++        padded_mask = causal_mask
+ 
+     def precomputed_mask_factory(precomputed_mask: torch.Tensor):
+         def mask_mod(b, h, q_idx, kv_idx):
+@@ -227,3 +241,21 @@ def flex_attention_with_block_mask(
+     attn_output = attn_output.transpose(1, 2).contiguous()
+     attn_output = attn_output.reshape(batch_size, -1, attn_output.shape[2] * attn_output.shape[3])
+     return attn_output
++
++
++def flex_attention_prepared(Q, K, V, block_mask, scaling=None, raw_output=False):
++    """Q [B, Hq, L, D], K/V [B, Hkv, L, D] already in flex layout (joint_qkv_prep output, no padding).
++
++    Same output as flex_attention_with_block_mask: [B, L, Hq * D] in Q's dtype; with raw_output=True flex's own
++    output [B, Hq, L, D] instead (for joint_attn_split).
++    """
++    B, Hq, L, D = Q.shape
++    out, _ = flex_attention(
++        Q, K, V, block_mask=block_mask, enable_gqa=True,
++        scale=D ** -0.5 if scaling is None else scaling, return_lse=True,
++        kernel_options=FLEX_KERNEL_OPTIONS_BF16 if Q.dtype == torch.bfloat16 else FLEX_KERNEL_OPTIONS,
++    )
++    if raw_output:
++        return out
++    # one copy, like the .contiguous() of the padded path (--train.fused_joint_attn_split fuses it with the split)
++    return out.transpose(1, 2).reshape(B, L, Hq * D)
+diff --git a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+index 44ccf04..41d826c 100644
+--- a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
++++ b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+@@ -2,6 +2,7 @@ import einops
+ import torch
+ from torch import Tensor, nn
+ import torch.nn.functional as F
++from torch.distributed.fsdp import FSDPModule
+ from typing import List, Optional, Tuple, Union
+ 
+ from transformers import AutoConfig, AutoTokenizer, PretrainedConfig, PreTrainedModel
+@@ -124,6 +125,12 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+     def __init__(self, config: QwenvlWithExpertV2Config, eval=False):
+         super().__init__(config=config)
+         self.config = config
++        if getattr(self.config, "attention_dtype", "fp32") not in ("fp32", "bf16"):
++            raise ValueError(f"attention_dtype must be fp32 or bf16, got {self.config.attention_dtype}")
++        if getattr(self.config, "attention_dtype", "fp32") == "bf16" and not (
++            getattr(self.config, "fused_joint_qkv_prep", False) and getattr(self.config, "fused_joint_attn_split", False)
++        ):
++            raise ValueError("attention_dtype=bf16 requires fused_joint_qkv_prep and fused_joint_attn_split")
+         vlm_config = AutoConfig.from_pretrained(self.config.tokenizer_path)
+         if self.config.vocab_size not in (0, 257152):
+             vlm_config.text_config.vocab_size = self.config.vocab_size
+@@ -216,26 +223,14 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+         pixel_values: torch.FloatTensor,
+         image_grid_thw: torch.LongTensor,
+     ):
+-        precompute_grid_thw = getattr(self.config, "precompute_grid_thw", False)
+-        if precompute_grid_thw and self.position_embeddings is None:
+-            (
+-                self.pos_embeds,
+-                self.position_embeddings,
+-                self.cu_seqlens,
+-                self.visual_split_sizes,
+-                self.visual_max_seqlen,
+-            ) = self.qwenvl.visual.preprcess_grid_thw(grid_thw=image_grid_thw)
++        # One explicit grid transfer, shared by position preparation and splitting.
++        # Construct cached tensors inside visual.forward, after FSDP has restored
++        # the actual compute dtype of its learned position table.
++        image_grid_cpu = image_grid_thw.detach().cpu()
+         image_embeds, deepstack_image_embeds = self.qwenvl.visual(
+-            pixel_values,
+-            grid_thw=image_grid_thw,
+-            pos_embeds=self.pos_embeds,
+-            position_embeddings=self.position_embeddings,
+-            cu_seqlens=self.cu_seqlens,
+-            max_seqlen=self.visual_max_seqlen,
++            pixel_values, grid_thw=image_grid_cpu,
+         )
+-        split_sizes = self.visual_split_sizes
+-        if split_sizes is None:
+-            split_sizes = (image_grid_thw.prod(-1) // self.qwenvl.visual.spatial_merge_size**2).tolist()
++        split_sizes = (image_grid_cpu.prod(-1) // self.qwenvl.visual.spatial_merge_size**2).tolist()
+         image_chunks = list(torch.split(image_embeds, split_sizes))
+         deepstack_chunks = [
+             list(torch.split(deepstack_embeds, split_sizes))
+@@ -331,10 +326,40 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+             f"(got action={action_num_layers}, vlm={num_layers})."
+         )
+ 
++        # --train.fused_joint_qkv_prep: per layer one Triton kernel per q/k/v tensor (cast + concat + RoPE + transpose
++        # to the flex layout, no pad) instead of .float() + cat + apply_mrope + pad (lingbotvla/ops/joint_qkv_prep.py)
++        use_fused = (
++            getattr(self.config, "fused_joint_qkv_prep", False)
++            and self.config.attention_implementation == "flex_cached"
++            and not use_cache
++            and len(inputs_embeds) == 2
++            and inputs_embeds[0] is not None
++            and inputs_embeds[1] is not None
++        )
++        if use_fused:
++            from lingbotvla.ops.joint_qkv_prep import joint_qkv_prep
++
++            from .flex_attention import flex_attention_prepared
++
++            # cos/sin depend only on position_ids: computed once per forward instead of in every layer's apply_mrope
++            # (rotary_emb takes only the dtype and device from its first argument)
++            rope_cos, rope_sin = self.qwenvl.model.language_model.rotary_emb(
++                torch.empty(0, dtype=torch.float32, device=position_ids.device), position_ids
++            )
++        # --train.fused_joint_attn_split (needs the fused prep): one Triton kernel per direction splits the flex output
++        # into each stream's own attention input (lingbotvla/ops/joint_attn_split.py)
++        use_split = use_fused and getattr(self.config, "fused_joint_attn_split", False)
++        if use_split:
++            from lingbotvla.ops.joint_attn_split import joint_attn_split
++        # --train.attention_dtype bf16 (needs both of the above): joint_qkv_prep writes bf16 Q/K/V, flex runs in bf16,
++        # and the split returns the expert part in the expert's own dtype
++        attn_dtype = torch.bfloat16 if getattr(self.config, "attention_dtype", "fp32") == "bf16" else torch.float32
++
+         for layer_idx in range(num_layers):
+             query_states = []
+             key_states = []
+             value_states = []
++            qkv_raw = []
+             for i, hidden_states in enumerate(inputs_embeds):
+                 if hidden_states is None:
+                     continue
+@@ -344,36 +369,68 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+                     )
+                 else:
+                     q, k, v = models[i].layers[layer_idx](hidden_states, compute_kqv=True)
++                if use_fused:
++                    qkv_raw.append((q, k, v))  # no .float(): joint_qkv_prep reads each stream in its own dtype
++                    continue
+                 query_states.append(q.float())
+                 key_states.append(k.float())
+                 value_states.append(v.float())
+ 
+-            query_states = torch.cat(query_states, dim=1)
+-            key_states = torch.cat(key_states, dim=1)
+-            value_states = torch.cat(value_states, dim=1)
+-            query_states, key_states = self.apply_mrope(query_states, key_states, position_ids)
+-            key_states, value_states, past_key_values = self.handle_kv_cache(
+-                key_states,
+-                value_states,
+-                layer_idx,
+-                past_key_values=past_key_values,
+-                use_cache=use_cache,
+-                fill_kv_cache=fill_kv_cache,
+-            )
+-            if self.config.attention_implementation == "flex_cached":
++            if use_fused:
++                (q_v, k_v, v_v), (q_e, k_e, v_e) = qkv_raw
++                # attn_dtype [B, Hq|Hkv, L, D], L = Lv + Le not padded to the flex block size
++                query_states, key_states, value_states = joint_qkv_prep(
++                    q_v, k_v, v_v, q_e, k_e, v_e, rope_cos, rope_sin, out_dtype=attn_dtype
++                )
+                 if layer_idx == 0:
+-                    _full_len = query_states.shape[1]
++                    _full_len = query_states.shape[2]
+                     _full_block_mask = build_block_mask(
+                         attention_mask,
+                         self.qwenvl.config.text_config.num_attention_heads,
+                         _full_len,
+                         _full_len,
++                        pad_to_block=False,
+                     )
+-                att_output = flex_attention_with_block_mask(
+-                    query_states, key_states, value_states, _full_block_mask, query_states.shape[1]
++                att_output = flex_attention_prepared(
++                    query_states, key_states, value_states, _full_block_mask, raw_output=use_split
+                 )
++                if use_split:
++                    # [B, Hq, L, D] -> the VLM part [B, Lv, Hq*D] in the VLM hidden dtype (bf16) and the expert part
++                    # [B, Le, Hq*D] in the dtype of the expert's q/k/v (fp32), so the layers' cast and slice of their
++                    # attention input are no-ops. Not inputs_embeds[1].dtype: the expert's input to layer 0 is bf16
++                    # (embed_suffix), while its layers compute and always got their attention part in fp32; with an
++                    # fp32 attention that is O's dtype, as before.
++                    att_parts = joint_attn_split(
++                        att_output, inputs_embeds[0].shape[1], inputs_embeds[1].shape[1],
++                        vlm_dtype=inputs_embeds[0].dtype, exp_dtype=q_e.dtype,
++                    )
+             else:
+-                att_output = self.attention_interface(query_states, key_states, value_states, attention_mask)
++                query_states = torch.cat(query_states, dim=1)
++                key_states = torch.cat(key_states, dim=1)
++                value_states = torch.cat(value_states, dim=1)
++                query_states, key_states = self.apply_mrope(query_states, key_states, position_ids)
++                key_states, value_states, past_key_values = self.handle_kv_cache(
++                    key_states,
++                    value_states,
++                    layer_idx,
++                    past_key_values=past_key_values,
++                    use_cache=use_cache,
++                    fill_kv_cache=fill_kv_cache,
++                )
++                if self.config.attention_implementation == "flex_cached":
++                    if layer_idx == 0:
++                        _full_len = query_states.shape[1]
++                        _full_block_mask = build_block_mask(
++                            attention_mask,
++                            self.qwenvl.config.text_config.num_attention_heads,
++                            _full_len,
++                            _full_len,
++                        )
++                    att_output = flex_attention_with_block_mask(
++                        query_states, key_states, value_states, _full_block_mask, query_states.shape[1]
++                    )
++                else:
++                    att_output = self.attention_interface(query_states, key_states, value_states, attention_mask)
+ 
+             outputs_embeds = []
+             start = 0
+@@ -382,12 +439,17 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+                     outputs_embeds.append(None)
+                     continue
+                 end = start + hidden_states.shape[1]
++                layer_att_output = att_output
++                layer_start, layer_end = start, end
++                if use_split:
++                    # this stream's own part of the attention output: start/end cover all of it
++                    layer_att_output, layer_start, layer_end = att_parts[i], 0, hidden_states.shape[1]
+                 if i == 1:
+                     out_emb, router_logits = models[i].layers[layer_idx](
+                         hidden_states,
+-                        att_output,
+-                        start,
+-                        end,
++                        layer_att_output,
++                        layer_start,
++                        layer_end,
+                         output_atten=True,
+                         ada_cond=ada_cond,
+                     )
+@@ -395,7 +457,7 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+                         router_logits_list.append(router_logits)
+                 else:
+                     out_emb = models[i].layers[layer_idx](
+-                        hidden_states, att_output, start, end, output_atten=True
++                        hidden_states, layer_att_output, layer_start, layer_end, output_atten=True
+                     )
+                     out_emb = self._apply_deepstack(out_emb, layer_idx, visual_pos_masks, deepstack_visual_embeds)
+                 outputs_embeds.append(out_emb)
+@@ -450,6 +512,9 @@ class FlowMatchingV2(FlowMatchingV1):
+             "adanorm_time",
+             "final_norm_adanorm",
+             "precompute_grid_thw",
++            "fused_joint_qkv_prep",
++            "fused_joint_attn_split",
++            "attention_dtype",
+             "vit_attn_implementation",
+             "use_moe",
+             "bias_update_speed",
+@@ -901,7 +966,11 @@ class FlowMatchingV2(FlowMatchingV1):
+         if getattr(self.config, "action_fp32", False):
+             v_t = self._fp32_linear(self.action_out_proj, suffix_out)
+         else:
+-            if suffix_out.dtype != self.action_out_proj.weight.dtype:
++            # With --train.fsdp_align_root, action_out_proj is its own FSDP2 unit: its weight is sharded outside its
++            # forward, and torch 2.8's dynamo crashes reading it there once it has a gradient (GA > 1). FSDP's
++            # pre-forward hook casts suffix_out to the unit's parameter dtype (mixed-precision policy) instead.
++            fsdp_unit = isinstance(self.action_out_proj, FSDPModule)
++            if not fsdp_unit and suffix_out.dtype != self.action_out_proj.weight.dtype:
+                 suffix_out = suffix_out.to(self.action_out_proj.weight.dtype)
+             v_t = self.action_out_proj(suffix_out)
+ 
+@@ -1065,7 +1134,11 @@ class FlowMatchingV2(FlowMatchingV1):
+         if getattr(self.config, "action_fp32", False):
+             v_t = self._fp32_linear(self.action_out_proj, suffix_out)
+         else:
+-            if suffix_out.dtype != self.action_out_proj.weight.dtype:
++            # With --train.fsdp_align_root, action_out_proj is its own FSDP2 unit: its weight is sharded outside its
++            # forward, and torch 2.8's dynamo crashes reading it there once it has a gradient (GA > 1). FSDP's
++            # pre-forward hook casts suffix_out to the unit's parameter dtype (mixed-precision policy) instead.
++            fsdp_unit = isinstance(self.action_out_proj, FSDPModule)
++            if not fsdp_unit and suffix_out.dtype != self.action_out_proj.weight.dtype:
+                 suffix_out = suffix_out.to(self.action_out_proj.weight.dtype)
+             v_t = self.action_out_proj(suffix_out)
+         return v_t
+diff --git a/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py b/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py
+index 239b6ae..998d6eb 100644
+--- a/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py
++++ b/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py
+@@ -1,3 +1,5 @@
++import os
++
+ import torch
+ from torch import nn
+ import torch.nn.functional as F
+@@ -258,22 +260,97 @@ class Qwen3VLForConditionalGeneration(_Qwen3VLForConditionalGeneration, Generati
+ 
+ 
+ @torch.compiler.disable
+-def preprcess_grid_thw(self, grid_thw: torch.Tensor):
+-    rotary_pos_emb = self.rot_pos_emb(grid_thw)
++def get_lingbot_grid_metadata(self, grid_thw):
++    """Cache only weight-independent metadata, keyed by the complete visual grid.
++
++    LingBot V2 transfers the complete input grid to CPU once. External CUDA grids
++    use one explicit D2H transfer rather than scalar synchronizations in a loop.
++    Cache entries are not buffers/state_dict values and never contain a learned
++    position embedding or an autograd graph.
++    """
++    from collections import OrderedDict
++
++    grid = tuple(tuple(int(v) for v in row) for row in grid_thw.detach().cpu().tolist())
++    weight = self.pos_embed.weight
++    inv_freq = self.rotary_pos_emb.inv_freq
++    key = (grid, weight.device, weight.dtype, self.spatial_merge_size,
++           self.num_grid_per_side, inv_freq.device, inv_freq.dtype,
++           inv_freq.data_ptr(), inv_freq._version, torch.is_inference_mode_enabled())
++    cache = getattr(self, "_lingbot_grid_metadata_cache", None)
++    if cache is None:
++        cache = self._lingbot_grid_metadata_cache = OrderedDict()
++    if key in cache:
++        cache.move_to_end(key)
++        return cache[key]
++
++    merge = self.spatial_merge_size
++    indices, weights, coords, permutation = [], [], [], []
++    lengths, split_sizes = [], []
++    offset = 0
++    with torch.no_grad():
++        for frames, height, width in grid:
++            if frames <= 0 or height <= 0 or width <= 0 or height % merge or width % merge:
++                raise ValueError("Visual grid dimensions must be positive and divisible by spatial_merge_size")
++            # Match the original CPU linspace and the four-corner summation order.
++            hs = torch.linspace(0, self.num_grid_per_side - 1, height)
++            ws = torch.linspace(0, self.num_grid_per_side - 1, width)
++            hf, wf = hs.int(), ws.int()
++            hc = (hf + 1).clamp(max=self.num_grid_per_side - 1)
++            wc = (wf + 1).clamp(max=self.num_grid_per_side - 1)
++            dh, dw = hs - hf, ws - wf
++            indices.append(torch.stack([
++                (hf[:, None] * self.num_grid_per_side + wf[None, :]).flatten(),
++                (hf[:, None] * self.num_grid_per_side + wc[None, :]).flatten(),
++                (hc[:, None] * self.num_grid_per_side + wf[None, :]).flatten(),
++                (hc[:, None] * self.num_grid_per_side + wc[None, :]).flatten(),
++            ]))
++            weights.append(torch.stack([
++                ((1 - dh)[:, None] * (1 - dw)[None, :]).flatten(),
++                ((1 - dh)[:, None] * dw[None, :]).flatten(),
++                (dh[:, None] * (1 - dw)[None, :]).flatten(),
++                (dh[:, None] * dw[None, :]).flatten(),
++            ]))
++            order = torch.arange(height * width).view(height // merge, merge, width // merge, merge)
++            order = order.permute(0, 2, 1, 3).reshape(-1)
++            coords.append(torch.stack((order // width, order % width), -1).repeat(frames, 1))
++            permutation.append((order + offset).repeat(frames))
++            offset += height * width
++            lengths.extend([height * width] * frames)
++            split_sizes.append(frames * height * width // (merge * merge))
++        pos_ids = torch.cat(coords).to(inv_freq.device, dtype=torch.long)
++        rotary = self.rotary_pos_emb(max(max(h, w) for _, h, w in grid))[pos_ids].flatten(1)
++        emb = torch.cat((rotary, rotary), dim=-1)
++        cumulative = torch.tensor([0] + lengths, dtype=torch.int32).cumsum(0, dtype=torch.int32)
++        metadata = dict(
++            indices=torch.cat(indices, dim=1).to(weight.device, dtype=torch.long),
++            weights=torch.cat(weights, dim=1).to(weight.device, dtype=weight.dtype),
++            permutation=torch.cat(permutation).to(weight.device, dtype=torch.long),
++            position_embeddings=(emb.cos(), emb.sin()),
++            cu_seqlens=cumulative.to(weight.device),
++            split_sizes=tuple(split_sizes), max_seqlen=max(lengths),
++        )
++    cache[key] = metadata
++    # Bound dynamic-resolution workloads; a different device/dtype cannot reuse a stale entry.
++    if len(cache) > 4:
++        cache.popitem(last=False)
++    return metadata
+ 
+-    seq_len = int(torch.prod(grid_thw, dim=1).sum().item())
+-    rotary_pos_emb = rotary_pos_emb.reshape(seq_len, -1)
+-    emb = torch.cat((rotary_pos_emb, rotary_pos_emb), dim=-1)
+-    position_embeddings = (emb.cos(), emb.sin())
+ 
+-    cu_seqlens = torch.repeat_interleave(grid_thw[:, 1] * grid_thw[:, 2], grid_thw[:, 0]).cumsum(
+-        dim=0,
+-        dtype=grid_thw.dtype if torch.jit.is_tracing() else torch.int32,
+-    )
+-    cu_seqlens = F.pad(cu_seqlens, (1, 0), value=0)
+-    split_sizes = (grid_thw.prod(-1) // self.spatial_merge_size**2).tolist()
+-    max_seqlen = int((cu_seqlens[1:] - cu_seqlens[:-1]).max().item())
+-    return None, position_embeddings, cu_seqlens, split_sizes, max_seqlen
++def fast_pos_embed_interpolate_cached(self, grid_thw, metadata=None):
++    if metadata is None:
++        metadata = self.get_lingbot_grid_metadata(grid_thw)
++    # Re-evaluate the learned table on every call so optimizer updates and gradients
++    # remain live. Preserve the original BF16 multiply/add rounding order.
++    corners = self.pos_embed(metadata["indices"]) * metadata["weights"][:, :, None]
++    positions = corners[0] + corners[1] + corners[2] + corners[3]
++    return positions.index_select(0, metadata["permutation"])
++
++
++@torch.compiler.disable
++def preprcess_grid_thw(self, grid_thw: torch.Tensor):
++    metadata = self.get_lingbot_grid_metadata(grid_thw)
++    return (None, metadata["position_embeddings"], metadata["cu_seqlens"],
++            metadata["split_sizes"], metadata["max_seqlen"])
+ 
+ 
+ def forward_without_grid_thw(
+@@ -286,12 +363,22 @@ def forward_without_grid_thw(
+     max_seqlen: Optional[int] = None,
+     **kwargs,
+ ) -> torch.Tensor:
++    metadata = kwargs.pop("grid_metadata", None)
++    needs_position_data = (
++        pos_embeds is None or position_embeddings is None or cu_seqlens is None or max_seqlen is None
++    )
++    # A complete precomputed input must also work without grid_thw, as before.
++    # Partial inputs retain the original all-or-recompute behavior.
++    if needs_position_data and metadata is None:
++        if grid_thw is None:
++            raise ValueError("grid_thw is required unless all position inputs are provided.")
++        metadata = self.get_lingbot_grid_metadata(grid_thw)
+     hidden_states = self.patch_embed(hidden_states)
+ 
+-    if pos_embeds is None or position_embeddings is None or cu_seqlens is None or max_seqlen is None:
+-        pos_embeds, position_embeddings, cu_seqlens, _, max_seqlen = self.preprcess_grid_thw(grid_thw)
+-    if pos_embeds is None:
+-        pos_embeds = self.fast_pos_embed_interpolate(grid_thw)
++    if needs_position_data:
++        position_embeddings = metadata["position_embeddings"]
++        cu_seqlens, max_seqlen = metadata["cu_seqlens"], metadata["max_seqlen"]
++        pos_embeds = self.fast_pos_embed_interpolate(grid_thw, metadata)
+ 
+     hidden_states = hidden_states + pos_embeds
+     seq_len, _ = hidden_states.size()
+@@ -316,8 +403,35 @@ def forward_without_grid_thw(
+     return hidden_states, deepstack_feature_lists
+ 
+ 
++def _rms_norm(hidden_states, weight, eps: float):
++    # Qwen3VLTextRMSNorm.forward, as a function of its tensors so that one compiled graph per shape serves every
++    # instance (compiling the method would guard on each module).
++    input_dtype = hidden_states.dtype
++    hidden_states = hidden_states.to(torch.float32)
++    variance = hidden_states.pow(2).mean(-1, keepdim=True)
++    hidden_states = hidden_states * torch.rsqrt(variance + eps)
++    return weight * hidden_states.to(input_dtype)
++
++
++_rms_norm_compiled = None
++
++
++def _qwen3vl_text_rms_norm_forward_compiled(self, hidden_states):
++    return _rms_norm_compiled(hidden_states, self.weight, self.variance_epsilon)
++
++
+ def apply_lingbot_qwen3_vl_patch():
+     logger.info_rank0("apply Qwen3-VL Lingbot patch")
++    if os.environ.get("LINGBOT_COMPILE_RMSNORM", "0") == "1":
++        # The decoder layers run eagerly (checkpoint is dynamo-disabled), so each norm is 8 kernels forward and 15 plus a
++        # memcpy and a memset backward. torch.compile'd it is 1 Triton kernel forward and 3 backward; the compiled function
++        # runs compiled inside the dynamo-disabled checkpoint too, in forward and in recompute.
++        global _rms_norm_compiled
++        # no fullgraph: _rms_norm has no graph break, and past the recompile limit (one entry per shape and grad
++        # mode, shared by all norms) a new shape then runs eagerly instead of raising
++        _rms_norm_compiled = torch.compile(_rms_norm, dynamic=False)
++        hf_qwen3vl.Qwen3VLTextRMSNorm.forward = _qwen3vl_text_rms_norm_forward_compiled
++        logger.info_rank0("LINGBOT_COMPILE_RMSNORM=1: Qwen3VLTextRMSNorm.forward runs a torch.compile'd fused kernel")
+     hf_qwen3vl.Qwen3VLPreTrainedModel = Qwen3VLPreTrainedModel
+     hf_qwen3vl.Qwen3VLTextDecoderLayer = Qwen3VLTextDecoderLayer
+     hf_qwen3vl.Qwen3VLTextModel = Qwen3VLTextModel
+@@ -327,3 +441,5 @@ def apply_lingbot_qwen3_vl_patch():
+     hf_qwen3vl.Qwen3VLVisionBlock = Qwen3VLVisionBlock
+     hf_qwen3vl.Qwen3VLVisionModel.forward = forward_without_grid_thw
+     hf_qwen3vl.Qwen3VLVisionModel.preprcess_grid_thw = preprcess_grid_thw
++    hf_qwen3vl.Qwen3VLVisionModel.get_lingbot_grid_metadata = get_lingbot_grid_metadata
++    hf_qwen3vl.Qwen3VLVisionModel.fast_pos_embed_interpolate = fast_pos_embed_interpolate_cached
+diff --git a/lingbotvla/ops/joint_attn_split.py b/lingbotvla/ops/joint_attn_split.py
+new file mode 100644
+index 0000000..335b97b
+--- /dev/null
++++ b/lingbotvla/ops/joint_attn_split.py
+@@ -0,0 +1,178 @@
++"""Fused split of the joint flex-attention output back into the VLM and expert streams.
++
++On the unfused path (flex_attention_with_block_mask's output slice / transpose / reshape, then the output_atten
++branch of Qwen3VLTextDecoderLayer.forward and Qwen2DecoderLayer.forward: .to(param_dtype), att_output[:, start:end])
++the attention output O [B, Hq, L_pad, D] fp32 goes through:
++    O[:, :, :L].transpose(1, 2).contiguous().reshape(B, L, Hq*D)   # 1 copy (fp32, all tokens)
++    att.to(bf16)                                                     # VLM layer: cast of ALL 337 tokens
++    att[:, 0:Lv]  / att[:, Lv:L]                                     # per-stream slice -> contiguous copies
++and in backward each slice produces a full-size zero tensor plus a copy, the two are added, the cast is undone.
++Per layer that is ~0.75 ms forward, ~0.4 ms in recompute and ~2.4 ms backward of pure data movement.
++
++`joint_attn_split(O, Lv, Le)` does it in one kernel per direction:
++    att_vlm [B, Lv, Hq*D]  (dtype = vlm_dtype, default bf16, RTNE)   att_exp [B, Le, Hq*D]  (O.dtype)
++    backward: dO [B, Hq, L_pad, D] in O.dtype, rows >= Lv+Le (padding, if any) zero-filled.
++Both directions are bit-identical to the eager chain (pure copies + one RTNE rounding).  The two layer calls then
++receive their own tensor with start=0, end=L_i, so the in-layer `.to(param_dtype)` and `[:, start:end]` become no-ops.
++
++On CUDA the Triton kernels run; on CPU (tests) an equivalent torch implementation runs.
++"""
++from __future__ import annotations
++
++import os
++from typing import Optional, Tuple
++
++import torch
++
++try:
++    import triton
++    import triton.language as tl
++except Exception:  # pragma: no cover
++    triton = None
++    tl = None
++
++_BLOCK_T = int(os.environ.get("JOINT_ATTN_SPLIT_BLOCK_T", "16"))
++_NUM_WARPS = int(os.environ.get("JOINT_ATTN_SPLIT_NUM_WARPS", "8"))
++
++
++if triton is not None:
++
++    @triton.jit
++    def _rtne_bf16_bits(x):
++        u = x.to(tl.int32, bitcast=True)
++        lsb = (u >> 16) & 1
++        r = (u + 0x7FFF + lsb) >> 16
++        # NaN stays NaN (0x7FFF, which CUDA's cvt.rn.bf16.f32, i.e. eager .to(bfloat16) on the GPU, gives); the carry
++        # above would turn it into +-0 or +-inf. Integer test: Triton compiles float compares assuming no NaNs.
++        r = tl.where((u & 0x7FFFFFFF) > 0x7F800000, 0x7FFF, r)
++        return r.to(tl.int16)
++
++    @triton.jit
++    def _split_fwd(o_ptr, v_ptr, e_ptr, Lv, L, H,
++                   s_ob, s_oh, s_ot,          # O [B, H, L_pad, D] strides (d stride 1)
++                   s_vb, s_vt, s_eb, s_et,    # outputs [B, L_i, H*D]: token stride, head offset = h*D
++                   VLM_BF16: tl.constexpr, EXP_BF16: tl.constexpr, D: tl.constexpr, BLOCK_T: tl.constexpr):
++        pid_bh = tl.program_id(0)
++        b = pid_bh // H
++        h = pid_bh - b * H
++        t = tl.program_id(1) * BLOCK_T + tl.arange(0, BLOCK_T)
++        d = tl.arange(0, D)
++        in_l = t < L
++        is_v = t < Lv
++        mv = in_l & is_v
++        me = in_l & (t >= Lv)
++        x = tl.load(o_ptr + b * s_ob + h * s_oh + t[:, None] * s_ot + d[None, :], mask=in_l[:, None], other=0.0).to(tl.float32)
++        tv = tl.where(is_v, t, 0)
++        te = tl.where(is_v, 0, t - Lv)
++        offv = b * s_vb + tv[:, None] * s_vt + h * D + d[None, :]
++        offe = b * s_eb + te[:, None] * s_et + h * D + d[None, :]
++        if VLM_BF16:
++            tl.store(v_ptr.to(tl.pointer_type(tl.int16)) + offv, _rtne_bf16_bits(x), mask=mv[:, None])
++        else:
++            tl.store(v_ptr + offv, x, mask=mv[:, None])
++        if EXP_BF16:
++            tl.store(e_ptr.to(tl.pointer_type(tl.int16)) + offe, _rtne_bf16_bits(x), mask=me[:, None])
++        else:
++            tl.store(e_ptr + offe, x, mask=me[:, None])
++
++    @triton.jit
++    def _split_bwd(gv_ptr, ge_ptr, go_ptr, Lv, L, Lpad, H,
++                   s_vb, s_vt, s_eb, s_et,
++                   s_ob, s_oh, s_ot,
++                   OUT_BF16: tl.constexpr, D: tl.constexpr, BLOCK_T: tl.constexpr):
++        pid_bh = tl.program_id(0)
++        b = pid_bh // H
++        h = pid_bh - b * H
++        t = tl.program_id(1) * BLOCK_T + tl.arange(0, BLOCK_T)
++        d = tl.arange(0, D)
++        in_pad = t < Lpad
++        is_v = t < Lv
++        in_e = (t >= Lv) & (t < L)
++        tv = tl.where(is_v, t, 0)
++        te = tl.where(in_e, t - Lv, 0)
++        gv = tl.load(gv_ptr + b * s_vb + tv[:, None] * s_vt + h * D + d[None, :], mask=is_v[:, None], other=0.0).to(tl.float32)
++        ge = tl.load(ge_ptr + b * s_eb + te[:, None] * s_et + h * D + d[None, :], mask=in_e[:, None], other=0.0).to(tl.float32)
++        g = tl.where(is_v[:, None], gv, ge)       # rows >= L stay 0 (padding)
++        offo = b * s_ob + h * s_oh + t[:, None] * s_ot + d[None, :]
++        if OUT_BF16:
++            tl.store(go_ptr.to(tl.pointer_type(tl.int16)) + offo, _rtne_bf16_bits(g), mask=in_pad[:, None])
++        else:
++            tl.store(go_ptr + offo, g, mask=in_pad[:, None])
++
++
++def _fwd_torch(o, Lv, Le, vlm_dtype, exp_dtype):
++    B, H, Lp, D = o.shape
++    att = o[:, :, :Lv + Le].transpose(1, 2).reshape(B, Lv + Le, H * D)
++    return att[:, :Lv].to(vlm_dtype).contiguous(), att[:, Lv:].to(exp_dtype).contiguous()
++
++
++def _bwd_torch(gv, ge, Lv, Le, Lp, H, D, dtype):
++    B = gv.shape[0]
++    g = torch.zeros(B, Lp, H, D, dtype=dtype, device=gv.device)
++    g[:, :Lv] = gv.to(dtype).view(B, Lv, H, D)
++    g[:, Lv:Lv + Le] = ge.to(dtype).view(B, Le, H, D)
++    return g.transpose(1, 2).contiguous()
++
++
++def _fwd_triton(o, Lv, Le, vlm_dtype, exp_dtype):
++    B, H, Lp, D = o.shape
++    L = Lv + Le
++    v = torch.empty(B, Lv, H * D, dtype=vlm_dtype, device=o.device)
++    e = torch.empty(B, Le, H * D, dtype=exp_dtype, device=o.device)
++    grid = lambda meta: (B * H, triton.cdiv(L, meta["BLOCK_T"]))  # noqa: E731
++    _split_fwd[grid](o, v, e, Lv, L, H, o.stride(0), o.stride(1), o.stride(2), v.stride(0), v.stride(1), e.stride(0), e.stride(1),
++                     VLM_BF16=(vlm_dtype == torch.bfloat16), EXP_BF16=(exp_dtype == torch.bfloat16), D=D, BLOCK_T=_BLOCK_T,
++                     num_warps=_NUM_WARPS)
++    return v, e
++
++
++def _bwd_triton(gv, ge, Lv, Le, Lp, H, D, dtype):
++    B = gv.shape[0]
++    L = Lv + Le
++    go = torch.empty(B, H, Lp, D, dtype=dtype, device=gv.device)
++    grid = lambda meta: (B * H, triton.cdiv(Lp, meta["BLOCK_T"]))  # noqa: E731
++    _split_bwd[grid](gv, ge, go, Lv, L, Lp, H, gv.stride(0), gv.stride(1), ge.stride(0), ge.stride(1),
++                     go.stride(0), go.stride(1), go.stride(2), OUT_BF16=(dtype == torch.bfloat16), D=D, BLOCK_T=_BLOCK_T,
++                     num_warps=_NUM_WARPS)
++    return go
++
++
++def _use_triton(t: torch.Tensor) -> bool:
++    return triton is not None and t.is_cuda
++
++
++class _JointAttnSplit(torch.autograd.Function):
++    @staticmethod
++    def forward(ctx, o, Lv, Le, vlm_dtype, exp_dtype):
++        assert o.dim() == 4 and o.stride(3) == 1 and Lv + Le <= o.shape[2], (o.shape, Lv, Le)
++        ctx.Lv, ctx.Le, ctx.shape, ctx.dtype = Lv, Le, tuple(o.shape), o.dtype
++        return (_fwd_triton if _use_triton(o) else _fwd_torch)(o, Lv, Le, vlm_dtype, exp_dtype)
++
++    @staticmethod
++    def backward(ctx, gv, ge):
++        B, H, Lp, D = ctx.shape
++        if gv is None: gv = torch.zeros(B, ctx.Lv, H * D, dtype=ctx.dtype, device=ge.device)
++        if ge is None: ge = torch.zeros(B, ctx.Le, H * D, dtype=ctx.dtype, device=gv.device)
++        gv = gv.contiguous(); ge = ge.contiguous()
++        go = (_bwd_triton if _use_triton(gv) else _bwd_torch)(gv, ge, ctx.Lv, ctx.Le, Lp, H, D, ctx.dtype)
++        return go, None, None, None, None
++
++
++@torch.compiler.disable
++def joint_attn_split(o: torch.Tensor, Lv: int, Le: int, vlm_dtype: torch.dtype = torch.bfloat16,
++                     exp_dtype: Optional[torch.dtype] = None) -> Tuple[torch.Tensor, torch.Tensor]:
++    """o: flex output [B, Hq, L_pad, D] (L_pad >= Lv+Le). Returns att_vlm [B, Lv, Hq*D] in vlm_dtype,
++    att_exp [B, Le, Hq*D] in exp_dtype (default: o.dtype; with a bf16 attention output pass the expert's fp32)."""
++    return _JointAttnSplit.apply(o, Lv, Le, vlm_dtype, o.dtype if exp_dtype is None else exp_dtype)
++
++
++def joint_attn_split_reference(o: torch.Tensor, Lv: int, Le: int, vlm_dtype: torch.dtype = torch.bfloat16,
++                               exp_dtype: Optional[torch.dtype] = None):
++    """The unfused eager chain (flex_attention_with_block_mask's output slice + the two layers' .to(param_dtype) and
++    [:, start:end])."""
++    B, H, Lp, D = o.shape
++    L = Lv + Le
++    att = o[:, :, :L, :].to(o.dtype).transpose(1, 2).contiguous().reshape(B, L, H * D)
++    att_v = att.to(vlm_dtype)[:, 0:Lv]
++    att_e = att.to(o.dtype if exp_dtype is None else exp_dtype)[:, Lv:L]
++    return att_v, att_e
+diff --git a/lingbotvla/ops/joint_qkv_prep.py b/lingbotvla/ops/joint_qkv_prep.py
+new file mode 100644
+index 0000000..d8a1f7c
+--- /dev/null
++++ b/lingbotvla/ops/joint_qkv_prep.py
+@@ -0,0 +1,306 @@
++"""Fused input preparation for the joint (VLM + action-expert) flex attention.
++
++Per layer the unfused path runs, for each of q/k/v (QwenvlWithExpertV2Model.forward: .float(), cat, apply_mrope;
++flex_attention_with_block_mask: transpose + F.pad):
++
++    x = torch.cat([x_vlm.float(), x_exp], dim=1)                 # [B, Lv+Le, H, D]  fp32
++    q, k = apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dim=2)  # RoPE (q, k only)
++    x = F.pad(x.transpose(1, 2), (0, 0, 0, L_pad - L))            # [B, H, L_pad, D]
++
++i.e. 3-4 full passes over 150-200 MB tensors per layer.  `joint_qkv_prep` does the same with ONE kernel per tensor:
++it reads the VLM stream (bf16) and the expert stream (fp32) once, applies RoPE in fp32 and writes the flex layout
++[B, H, L, D] directly, without concat and without padding (torch 2.8 flex supports L % 128 != 0).  The backward is
++one kernel per tensor: inverse rotation (RoPE is orthogonal, so d x = g*cos - rotate_half(g*sin)), split back into the
++two streams, VLM part cast back to its dtype.  Only cos/sin are saved for backward.
++
++    Q, K, V = joint_qkv_prep(q_vlm, k_vlm, v_vlm, q_exp, k_exp, v_exp, cos, sin)
++        q_vlm/k_vlm/v_vlm : [B, Lv, Hq|Hkv, D]  (bf16 in training; already through q_norm/k_norm)
++        q_exp/k_exp/v_exp : [B, Le, Hq|Hkv, D]  (fp32)
++        cos, sin          : [B, Lv+Le, D]       fp32, from Qwen3VLTextRotaryEmbedding (both halves identical)
++        Q                 : [B, Hq, L, D]  contiguous, dtype = out_dtype (default fp32); K, V: [B, Hkv, L, D]
++
++On CUDA the Triton kernels are used; on CPU (unit tests) an equivalent torch implementation of the same math runs.
++RoPE follows HF exactly: rotate_half(x) = cat(-x2, x1);  y1 = x1*c - x2*s,  y2 = x2*c + x1*s  (c, s = first half).
++The kernels are compiled with enable_fp_fusion=False: with Triton's default mul+add -> FMA contraction ~24% of the
++rotated q/k elements differ from eager in the last fp32 bit, and ~2e-5 of the bf16 VLM grads land on the neighbouring
++bf16 value. Without it, forward and backward are bit-identical to the eager chain (and the speed is the same).
++"""
++from __future__ import annotations
++
++import os
++from typing import Optional, Tuple
++
++import torch
++
++try:  # Triton is optional so that the CPU path (tests) works without it
++    import triton
++    import triton.language as tl
++except Exception:  # pragma: no cover
++    triton = None
++    tl = None
++
++_BLOCK_T = int(os.environ.get("JOINT_QKV_PREP_BLOCK_T", "16"))
++_NUM_WARPS = int(os.environ.get("JOINT_QKV_PREP_NUM_WARPS", "4"))
++
++
++if triton is not None:
++
++    @triton.jit
++    def _joint_prep_fwd(
++        xv_ptr, xe_ptr, cos_ptr, sin_ptr, out_ptr,
++        Lv, L, H,
++        s_vb, s_vt, s_vh,
++        s_eb, s_et, s_eh,
++        s_cb, s_ct,
++        s_ob, s_oh, s_ot,
++        ROPE: tl.constexpr, HALF: tl.constexpr, BLOCK_T: tl.constexpr, OUT_BF16: tl.constexpr,
++    ):
++        pid_bh = tl.program_id(0)
++        b = pid_bh // H
++        h = pid_bh - b * H
++        t = tl.program_id(1) * BLOCK_T + tl.arange(0, BLOCK_T)
++        d = tl.arange(0, HALF)
++        in_l = t < L
++        is_v = t < Lv
++        mv = in_l & is_v
++        me = in_l & (t >= Lv)
++        tv = tl.where(is_v, t, 0)
++        te = tl.where(is_v, 0, t - Lv)
++        offv = b * s_vb + tv[:, None] * s_vt + h * s_vh + d[None, :]
++        offe = b * s_eb + te[:, None] * s_et + h * s_eh + d[None, :]
++        xv1 = tl.load(xv_ptr + offv, mask=mv[:, None], other=0.0).to(tl.float32)
++        xv2 = tl.load(xv_ptr + offv + HALF, mask=mv[:, None], other=0.0).to(tl.float32)
++        xe1 = tl.load(xe_ptr + offe, mask=me[:, None], other=0.0).to(tl.float32)
++        xe2 = tl.load(xe_ptr + offe + HALF, mask=me[:, None], other=0.0).to(tl.float32)
++        x1 = tl.where(is_v[:, None], xv1, xe1)
++        x2 = tl.where(is_v[:, None], xv2, xe2)
++        if ROPE:
++            offc = b * s_cb + t[:, None] * s_ct + d[None, :]
++            c = tl.load(cos_ptr + offc, mask=in_l[:, None], other=0.0).to(tl.float32)
++            s = tl.load(sin_ptr + offc, mask=in_l[:, None], other=0.0).to(tl.float32)
++            y1 = x1 * c - x2 * s
++            y2 = x2 * c + x1 * s
++        else:
++            y1 = x1
++            y2 = x2
++        offo = b * s_ob + h * s_oh + t[:, None] * s_ot + d[None, :]
++        if OUT_BF16:
++            # explicit RTNE so that the bf16 output is identical to torch's .to(bfloat16) on every backend
++            oi = out_ptr.to(tl.pointer_type(tl.int16))
++            tl.store(oi + offo, _f32_to_bf16_bits_rtne(y1), mask=in_l[:, None])
++            tl.store(oi + offo + HALF, _f32_to_bf16_bits_rtne(y2), mask=in_l[:, None])
++        else:
++            tl.store(out_ptr + offo, y1, mask=in_l[:, None])
++            tl.store(out_ptr + offo + HALF, y2, mask=in_l[:, None])
++
++    @triton.jit
++    def _f32_to_bf16_bits_rtne(x):
++        # round-to-nearest-even fp32 -> bf16, returned as int16 bit pattern (same result as torch's .to(bfloat16);
++        # makes the VLM-side gradient bit-identical to eager on every backend, including TRITON_INTERPRET=1)
++        u = x.to(tl.int32, bitcast=True)
++        lsb = (u >> 16) & 1
++        r = (u + 0x7FFF + lsb) >> 16
++        # NaN stays NaN (0x7FFF, which CUDA's cvt.rn.bf16.f32, i.e. eager .to(bfloat16) on the GPU, gives); the carry
++        # above would turn it into +-0 or +-inf. Integer test: Triton compiles float compares assuming no NaNs.
++        r = tl.where((u & 0x7FFFFFFF) > 0x7F800000, 0x7FFF, r)
++        return r.to(tl.int16)
++
++    @triton.jit
++    def _joint_prep_bwd(
++        g_ptr, cos_ptr, sin_ptr, dv_ptr, de_ptr,
++        Lv, L, H,
++        s_gb, s_gh, s_gt,
++        s_cb, s_ct,
++        s_vb, s_vt, s_vh,
++        s_eb, s_et, s_eh,
++        ROPE: tl.constexpr, HALF: tl.constexpr, BLOCK_T: tl.constexpr, VLM_BF16: tl.constexpr,
++    ):
++        pid_bh = tl.program_id(0)
++        b = pid_bh // H
++        h = pid_bh - b * H
++        t = tl.program_id(1) * BLOCK_T + tl.arange(0, BLOCK_T)
++        d = tl.arange(0, HALF)
++        in_l = t < L
++        is_v = t < Lv
++        mv = in_l & is_v
++        me = in_l & (t >= Lv)
++        tv = tl.where(is_v, t, 0)
++        te = tl.where(is_v, 0, t - Lv)
++        offg = b * s_gb + h * s_gh + t[:, None] * s_gt + d[None, :]
++        g1 = tl.load(g_ptr + offg, mask=in_l[:, None], other=0.0).to(tl.float32)
++        g2 = tl.load(g_ptr + offg + HALF, mask=in_l[:, None], other=0.0).to(tl.float32)
++        if ROPE:
++            offc = b * s_cb + t[:, None] * s_ct + d[None, :]
++            c = tl.load(cos_ptr + offc, mask=in_l[:, None], other=0.0).to(tl.float32)
++            s = tl.load(sin_ptr + offc, mask=in_l[:, None], other=0.0).to(tl.float32)
++            dx1 = g1 * c + g2 * s
++            dx2 = g2 * c - g1 * s
++        else:
++            dx1 = g1
++            dx2 = g2
++        offv = b * s_vb + tv[:, None] * s_vt + h * s_vh + d[None, :]
++        offe = b * s_eb + te[:, None] * s_et + h * s_eh + d[None, :]
++        if VLM_BF16:
++            dv_i16 = dv_ptr.to(tl.pointer_type(tl.int16))
++            tl.store(dv_i16 + offv, _f32_to_bf16_bits_rtne(dx1), mask=mv[:, None])
++            tl.store(dv_i16 + offv + HALF, _f32_to_bf16_bits_rtne(dx2), mask=mv[:, None])
++        else:
++            tl.store(dv_ptr + offv, dx1, mask=mv[:, None])
++            tl.store(dv_ptr + offv + HALF, dx2, mask=mv[:, None])
++        tl.store(de_ptr + offe, dx1, mask=me[:, None])
++        tl.store(de_ptr + offe + HALF, dx2, mask=me[:, None])
++
++
++def _check(xv: torch.Tensor, xe: torch.Tensor, cos: Optional[torch.Tensor], sin: Optional[torch.Tensor]) -> None:
++    assert xv.dim() == 4 and xe.dim() == 4, (xv.shape, xe.shape)
++    B, Lv, H, D = xv.shape
++    assert xe.shape[0] == B and xe.shape[2] == H and xe.shape[3] == D, (xv.shape, xe.shape)
++    assert D % 2 == 0 and xv.stride(3) == 1 and xe.stride(3) == 1, "last dim must be contiguous"
++    if cos is not None:
++        L = Lv + xe.shape[1]
++        assert cos.shape == (B, L, D) and sin.shape == (B, L, D), (cos.shape, sin.shape, (B, L, D))
++        assert cos.stride(2) == 1 and sin.stride(2) == 1
++
++
++# --------------------------------------------------------------------------------------------------------------
++# torch implementation of exactly the kernel math (CPU path / reference for the Triton path)
++# --------------------------------------------------------------------------------------------------------------
++def _fwd_torch(xv, xe, cos, sin, rope: bool, out_dtype) -> torch.Tensor:
++    cdt = torch.float64 if xe.dtype == torch.float64 else torch.float32
++    x = torch.cat([xv.to(cdt), xe.to(cdt)], dim=1)  # [B, L, H, D]
++    if rope:
++        half = x.shape[-1] // 2
++        c = cos[..., :half].to(cdt).unsqueeze(2)
++        s = sin[..., :half].to(cdt).unsqueeze(2)
++        x1, x2 = x[..., :half], x[..., half:]
++        x = torch.cat([x1 * c - x2 * s, x2 * c + x1 * s], dim=-1)
++    return x.transpose(1, 2).contiguous().to(out_dtype)
++
++
++def _bwd_torch(g, cos, sin, Lv: int, rope: bool, dv_dtype, de_dtype):
++    cdt = torch.float64 if g.dtype == torch.float64 else torch.float32
++    g = g.to(cdt).transpose(1, 2)  # [B, L, H, D]
++    if rope:
++        half = g.shape[-1] // 2
++        c = cos[..., :half].to(cdt).unsqueeze(2)
++        s = sin[..., :half].to(cdt).unsqueeze(2)
++        g1, g2 = g[..., :half], g[..., half:]
++        g = torch.cat([g1 * c + g2 * s, g2 * c - g1 * s], dim=-1)
++    return g[:, :Lv].to(dv_dtype).contiguous(), g[:, Lv:].to(de_dtype).contiguous()
++
++
++# --------------------------------------------------------------------------------------------------------------
++# Triton launchers
++# --------------------------------------------------------------------------------------------------------------
++def _fwd_triton(xv, xe, cos, sin, rope: bool, out_dtype) -> torch.Tensor:
++    B, Lv, H, D = xv.shape
++    L = Lv + xe.shape[1]
++    out = torch.empty(B, H, L, D, dtype=out_dtype, device=xv.device)
++    c = cos if rope else out
++    s = sin if rope else out
++    grid = lambda meta: (B * H, triton.cdiv(L, meta["BLOCK_T"]))  # noqa: E731
++    _joint_prep_fwd[grid](
++        xv, xe, c, s, out, Lv, L, H,
++        xv.stride(0), xv.stride(1), xv.stride(2),
++        xe.stride(0), xe.stride(1), xe.stride(2),
++        c.stride(0) if rope else 0, c.stride(1) if rope else 0,
++        out.stride(0), out.stride(1), out.stride(2),
++        ROPE=rope, HALF=D // 2, BLOCK_T=_BLOCK_T, OUT_BF16=(out_dtype == torch.bfloat16), num_warps=_NUM_WARPS,
++        enable_fp_fusion=False,  # no FMA contraction: bit-identical to eager (see module docstring)
++    )
++    return out
++
++
++def _bwd_triton(g, cos, sin, Lv: int, rope: bool, dv_dtype, de_dtype):
++    if g.stride(3) != 1:
++        g = g.contiguous()
++    B, H, L, D = g.shape
++    Le = L - Lv
++    dv = torch.empty(B, Lv, H, D, dtype=dv_dtype, device=g.device)
++    de = torch.empty(B, Le, H, D, dtype=de_dtype, device=g.device)
++    c = cos if rope else g
++    s = sin if rope else g
++    grid = lambda meta: (B * H, triton.cdiv(L, meta["BLOCK_T"]))  # noqa: E731
++    _joint_prep_bwd[grid](
++        g, c, s, dv, de, Lv, L, H,
++        g.stride(0), g.stride(1), g.stride(2),
++        c.stride(0) if rope else 0, c.stride(1) if rope else 0,
++        dv.stride(0), dv.stride(1), dv.stride(2),
++        de.stride(0), de.stride(1), de.stride(2),
++        ROPE=rope, HALF=D // 2, BLOCK_T=_BLOCK_T, VLM_BF16=(dv_dtype == torch.bfloat16), num_warps=_NUM_WARPS,
++        enable_fp_fusion=False,  # no FMA contraction: bit-identical to eager (see module docstring)
++    )
++    return dv, de
++
++
++def _use_triton(t: torch.Tensor) -> bool:
++    return triton is not None and t.is_cuda
++
++
++def _fwd(xv, xe, cos, sin, rope, out_dtype):
++    _check(xv, xe, cos if rope else None, sin if rope else None)
++    return (_fwd_triton if _use_triton(xv) else _fwd_torch)(xv, xe, cos, sin, rope, out_dtype)
++
++
++def _bwd(g, cos, sin, Lv, rope, dv_dtype, de_dtype):
++    return (_bwd_triton if _use_triton(g) else _bwd_torch)(g, cos, sin, Lv, rope, dv_dtype, de_dtype)
++
++
++class _JointQKVPrep(torch.autograd.Function):
++    @staticmethod
++    def forward(ctx, q_v, k_v, v_v, q_e, k_e, v_e, cos, sin, out_dtype):
++        ctx.save_for_backward(cos, sin)
++        ctx.Lv = q_v.shape[1]
++        ctx.dtypes = (q_v.dtype, q_e.dtype)
++        Q = _fwd(q_v, q_e, cos, sin, True, out_dtype)
++        K = _fwd(k_v, k_e, cos, sin, True, out_dtype)
++        V = _fwd(v_v, v_e, None, None, False, out_dtype)
++        return Q, K, V
++
++    @staticmethod
++    def backward(ctx, dQ, dK, dV):
++        cos, sin = ctx.saved_tensors
++        dv_dtype, de_dtype = ctx.dtypes
++        dq_v, dq_e = _bwd(dQ, cos, sin, ctx.Lv, True, dv_dtype, de_dtype)
++        dk_v, dk_e = _bwd(dK, cos, sin, ctx.Lv, True, dv_dtype, de_dtype)
++        dv_v, dv_e = _bwd(dV, None, None, ctx.Lv, False, dv_dtype, de_dtype)
++        return dq_v, dk_v, dv_v, dq_e, dk_e, dv_e, None, None, None
++
++
++@torch.compiler.disable
++def joint_qkv_prep(
++    q_vlm: torch.Tensor, k_vlm: torch.Tensor, v_vlm: torch.Tensor,
++    q_exp: torch.Tensor, k_exp: torch.Tensor, v_exp: torch.Tensor,
++    cos: torch.Tensor, sin: torch.Tensor,
++    out_dtype: torch.dtype = torch.float32,
++) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
++    """See module docstring. Returns Q [B, Hq, L, D], K [B, Hkv, L, D], V [B, Hkv, L, D] in `out_dtype`."""
++    return _JointQKVPrep.apply(q_vlm, k_vlm, v_vlm, q_exp, k_exp, v_exp, cos, sin, out_dtype)
++
++
++# --------------------------------------------------------------------------------------------------------------
++# Reference: the current eager semantics (HF apply_rotary_pos_emb + cat + transpose [+ pad]); used by the tests
++# --------------------------------------------------------------------------------------------------------------
++def _rotate_half(x):
++    x1 = x[..., : x.shape[-1] // 2]
++    x2 = x[..., x.shape[-1] // 2:]
++    return torch.cat((-x2, x1), dim=-1)
++
++
++def joint_qkv_prep_reference(q_vlm, k_vlm, v_vlm, q_exp, k_exp, v_exp, cos, sin, pad_to: Optional[int] = None):
++    cdt = torch.float64 if q_exp.dtype == torch.float64 else torch.float32
++    q = torch.cat([q_vlm.to(cdt), q_exp.to(cdt)], dim=1)
++    k = torch.cat([k_vlm.to(cdt), k_exp.to(cdt)], dim=1)
++    v = torch.cat([v_vlm.to(cdt), v_exp.to(cdt)], dim=1)
++    c = cos.to(cdt).unsqueeze(2)
++    s = sin.to(cdt).unsqueeze(2)
++    q = (q * c) + (_rotate_half(q) * s)
++    k = (k * c) + (_rotate_half(k) * s)
++
++    def lay(x):
++        x = x.transpose(1, 2)
++        if pad_to is not None and pad_to > x.shape[2]:
++            x = torch.nn.functional.pad(x, (0, 0, 0, pad_to - x.shape[2]), value=0.0)
++        return x.contiguous()
++
++    return lay(q), lay(k), lay(v)
+diff --git a/lingbotvla/ops/swiglu.py b/lingbotvla/ops/swiglu.py
+new file mode 100644
+index 0000000..c23ce02
+--- /dev/null
++++ b/lingbotvla/ops/swiglu.py
+@@ -0,0 +1,211 @@
++"""Fused SwiGLU activation  out = silu(gate) * up  for the Qwen3-VL text MLP (one kernel forward, one backward).
++
++HF `Qwen3VLTextMLP.forward` is `down_proj(act_fn(gate_proj(x)) * up_proj(x))`; inside the (eager) decoder layer this
++runs as two kernels forward (silu, mul) and three backward (mul-backward x2, silu_backward) over [B*L, 9728] bf16
++tensors (178 MB each at micro 32): 890 MB of traffic forward, 1602 MB backward, per layer.  This module does the
++same with one kernel each (534 MB / 890 MB).
++
++Numerics ("exact" mode, default): the eager chain rounds silu(gate) to bf16 before the multiply, and in backward
++rounds d_silu = dout*up and d_up = dout*silu to bf16 before silu_backward.  The kernels reproduce every one of
++these roundings (RTNE), use IEEE division and libdevice expf like ATen's silu kernels, so the result should be
++bit-identical to eager; the unit test checks that.  `exact=False` skips the intermediate roundings (slightly more
++accurate, like Liger's swiglu) and is not bit-identical.
++
++    from lingbotvla.ops.swiglu import swiglu, apply_fused_swiglu
++    y = swiglu(gate, up)                 # same shape/dtype as gate
++    n = apply_fused_swiglu(model)        # patch every Qwen3VLTextMLP.forward; returns number of modules patched
++
++On CPU (unit tests) an equivalent torch implementation of the same math runs.
++"""
++from __future__ import annotations
++
++import os
++import types
++from typing import Tuple
++
++import torch
++
++try:
++    import triton
++    import triton.language as tl
++    try:  # precise expf (libdevice __nv_expf), same as ATen's ::exp in silu kernels
++        from triton.language.extra import libdevice as _libdevice
++    except Exception:  # pragma: no cover
++        from triton.language.extra.cuda import libdevice as _libdevice
++except Exception:  # pragma: no cover
++    triton = None
++    tl = None
++    _libdevice = None
++
++_BLOCK = int(os.environ.get("SWIGLU_BLOCK", "1024"))
++_NUM_WARPS = int(os.environ.get("SWIGLU_NUM_WARPS", "8"))
++
++
++
++if triton is not None:
++
++    @triton.jit
++    def _exp_libdevice(x):
++        return _libdevice.exp(x)      # precise expf (__nv_expf), same as ATen's ::exp in the silu kernels
++
++    @triton.jit
++    def _exp_builtin(x):
++        return tl.exp(x)              # CPU interpreter has no libdevice; numpy exp is exact there
++
++    _EXP = _exp_builtin if os.environ.get("TRITON_INTERPRET") == "1" else _exp_libdevice
++
++    @triton.jit
++    def _rtne_bf16_bits(x):
++        u = x.to(tl.int32, bitcast=True)
++        lsb = (u >> 16) & 1
++        r = (u + 0x7FFF + lsb) >> 16
++        # NaN stays NaN (0x7FFF, which CUDA's cvt.rn.bf16.f32, i.e. eager .to(bfloat16) on the GPU, gives); the carry
++        # above would turn it into +-0 or +-inf. Integer test: Triton compiles float compares assuming no NaNs.
++        r = tl.where((u & 0x7FFFFFFF) > 0x7F800000, 0x7FFF, r)
++        return r.to(tl.int16)
++
++    @triton.jit
++    def _round_bf16(x):
++        # fp32 -> bf16 (RTNE) -> fp32, as a value
++        return (_rtne_bf16_bits(x).to(tl.int32) << 16).to(tl.float32, bitcast=True)
++
++    @triton.jit
++    def _silu_f32(g):
++        # ATen: x / (1 + exp(-x)) in fp32, IEEE division
++        return tl.div_rn(g, 1.0 + _EXP(-g))
++
++    @triton.jit
++    def _swiglu_fwd(g_ptr, u_ptr, o_ptr, N, EXACT: tl.constexpr, OUT_BF16: tl.constexpr, BLOCK: tl.constexpr):
++        i = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
++        m = i < N
++        g = tl.load(g_ptr + i, mask=m, other=0.0).to(tl.float32)
++        u = tl.load(u_ptr + i, mask=m, other=0.0).to(tl.float32)
++        s = _silu_f32(g)
++        if EXACT:
++            s = _round_bf16(s)
++        y = s * u
++        if OUT_BF16:
++            tl.store(o_ptr.to(tl.pointer_type(tl.int16)) + i, _rtne_bf16_bits(y), mask=m)
++        else:
++            tl.store(o_ptr + i, y, mask=m)
++
++    @triton.jit
++    def _swiglu_bwd(do_ptr, g_ptr, u_ptr, dg_ptr, du_ptr, N, EXACT: tl.constexpr, OUT_BF16: tl.constexpr, BLOCK: tl.constexpr):
++        i = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
++        m = i < N
++        do = tl.load(do_ptr + i, mask=m, other=0.0).to(tl.float32)
++        g = tl.load(g_ptr + i, mask=m, other=0.0).to(tl.float32)
++        u = tl.load(u_ptr + i, mask=m, other=0.0).to(tl.float32)
++        sig = tl.div_rn(1.0, 1.0 + _EXP(-g))
++        s = _silu_f32(g)
++        if EXACT:
++            s = _round_bf16(s)
++        du = do * s                      # mul backward: grad_other = grad * self
++        ds = do * u                      # mul backward: grad_self  = grad * other
++        if EXACT:
++            ds = _round_bf16(ds)
++        dg = (ds * sig) * (1.0 + g * (1.0 - sig))   # ATen silu_backward: dy * s * (1 + x * (1 - s))
++        if OUT_BF16:
++            tl.store(dg_ptr.to(tl.pointer_type(tl.int16)) + i, _rtne_bf16_bits(dg), mask=m)
++            tl.store(du_ptr.to(tl.pointer_type(tl.int16)) + i, _rtne_bf16_bits(du), mask=m)
++        else:
++            tl.store(dg_ptr + i, dg, mask=m)
++            tl.store(du_ptr + i, du, mask=m)
++
++
++# ---------------------------------------------------------------- torch implementation of the same math (CPU path)
++def _rb(x: torch.Tensor, bf16: bool) -> torch.Tensor:
++    return x.to(torch.bfloat16).to(torch.float32) if bf16 else x
++
++
++def _fwd_torch(g, u, exact):
++    bf = g.dtype == torch.bfloat16
++    gf, uf = g.float(), u.float()
++    s = gf / (1.0 + torch.exp(-gf))
++    if exact:
++        s = _rb(s, bf)
++    return (s * uf).to(g.dtype)
++
++
++def _bwd_torch(do, g, u, exact):
++    bf = g.dtype == torch.bfloat16
++    dof, gf, uf = do.float(), g.float(), u.float()
++    sig = 1.0 / (1.0 + torch.exp(-gf))
++    s = gf / (1.0 + torch.exp(-gf))
++    if exact:
++        s = _rb(s, bf)
++    du = dof * s
++    ds = dof * uf
++    if exact:
++        ds = _rb(ds, bf)
++    dg = (ds * sig) * (1.0 + gf * (1.0 - sig))
++    return dg.to(g.dtype), du.to(u.dtype)
++
++
++# ---------------------------------------------------------------- launchers
++def _fwd_triton(g, u, exact):
++    o = torch.empty_like(g)
++    N = g.numel()
++    grid = (triton.cdiv(N, _BLOCK),)
++    bf = g.dtype == torch.bfloat16
++    _swiglu_fwd[grid](g, u, o, N, EXACT=(exact and bf), OUT_BF16=bf, BLOCK=_BLOCK, num_warps=_NUM_WARPS)
++    return o
++
++
++def _bwd_triton(do, g, u, exact):
++    dg, du = torch.empty_like(g), torch.empty_like(u)
++    N = g.numel()
++    grid = (triton.cdiv(N, _BLOCK),)
++    bf = g.dtype == torch.bfloat16
++    _swiglu_bwd[grid](do, g, u, dg, du, N, EXACT=(exact and bf), OUT_BF16=bf, BLOCK=_BLOCK, num_warps=_NUM_WARPS)
++    return dg, du
++
++
++def _use_triton(t: torch.Tensor) -> bool:
++    return triton is not None and t.is_cuda
++
++
++class _SwiGLU(torch.autograd.Function):
++    @staticmethod
++    def forward(ctx, g, u, exact):
++        assert g.shape == u.shape and g.dtype == u.dtype, (g.shape, u.shape, g.dtype, u.dtype)
++        g = g.contiguous()
++        u = u.contiguous()
++        ctx.save_for_backward(g, u)
++        ctx.exact = exact
++        return (_fwd_triton if _use_triton(g) else _fwd_torch)(g, u, exact)
++
++    @staticmethod
++    def backward(ctx, do):
++        g, u = ctx.saved_tensors
++        do = do.contiguous()
++        dg, du = (_bwd_triton if _use_triton(g) else _bwd_torch)(do, g, u, ctx.exact)
++        return dg, du, None
++
++
++@torch.compiler.disable
++def swiglu(gate: torch.Tensor, up: torch.Tensor, exact: bool = True) -> torch.Tensor:
++    """silu(gate) * up in one kernel (forward and backward). exact=True reproduces eager bf16 rounding."""
++    return _SwiGLU.apply(gate, up, exact)
++
++
++def _fused_mlp_forward(self, x):
++    return self.down_proj(swiglu(self.gate_proj(x), self.up_proj(x)))
++
++
++def apply_fused_swiglu(model: torch.nn.Module, class_names: Tuple[str, ...] = ("Qwen3VLTextMLP",)) -> int:
++    """Replace `forward` of every MLP module whose class name is in `class_names` (default: the Qwen3-VL text MLP)
++    with the fused version. Call before FSDP wrapping / torch.compile. Returns the number of modules patched."""
++    n = 0
++    for mod in model.modules():
++        if type(mod).__name__ in class_names:
++            act = getattr(getattr(mod, "config", None), "hidden_act", "silu")
++            assert act == "silu", f"fused swiglu expects hidden_act='silu', got {act!r}"
++            mod.forward = types.MethodType(_fused_mlp_forward, mod)
++            n += 1
++    return n
++
++
++def swiglu_reference(gate: torch.Tensor, up: torch.Tensor) -> torch.Tensor:
++    """The current eager computation (for tests)."""
++    return torch.nn.functional.silu(gate) * up
+diff --git a/tasks/vla/train_lingbotvla.py b/tasks/vla/train_lingbotvla.py
+index a09c541..f530f90 100644
+--- a/tasks/vla/train_lingbotvla.py
++++ b/tasks/vla/train_lingbotvla.py
+@@ -46,6 +46,7 @@ from lingbotvla.models.vla.vision_models.module_utils import (
+     log_video,
+ )
+ from lingbotvla.models.vla.lingbot_vla.moe_load_balance import build_moe_load_balance_hook
++from lingbotvla.data.vla_data import teacher_cache
+ import gc
+ gc.set_threshold(50000, 50, 50)
+ 
+@@ -170,6 +171,20 @@ class MyTrainingArguments(TrainingArguments):
+         default_factory=dict,
+         metadata={"help": "The config of vaco"},
+     )
++    teacher_cache_dir: Optional[str] = field(
++        default=None,
++        metadata={"help": "Directory of precomputed teacher targets. Unset: run the teachers every step."},
++    )
++    teacher_cache_mode: Literal["read", "build", "verify"] = field(
++        default="read",
++        metadata={
++            "help": "With teacher_cache_dir: `build` writes the cache and exits; `read` trains from it "
++            "without loading the teachers; `verify` also runs the teachers, logs how far the cached "
++            "targets are from them, and trains on the cached targets. Loading the teachers draws from "
++            "the random generators, so only `verify` keeps the flow-matching noise of a run without "
++            "the cache and isolates the effect of the cached targets on the loss."
++        },
++    )
+     attention_implementation: str = field(
+         default="flex",
+         metadata={"help": "Attention implementation: flex, flex_cached, or eager."},
+@@ -283,6 +298,43 @@ class MyTrainingArguments(TrainingArguments):
+         default=False,
+         metadata={"help": "Whether to apply FSDP2 for VLM."},
+     )
++    fsdp_align_root: bool = field(
++        default=False,
++        metadata={"help": "Wrap root-unit params whose per-rank shard is not a multiple of 8 elements (e.g. a (55,) bias) "
++                          "in their own FSDP2 unit, so the root all-gather chunk is 16-byte aligned and NCCL copies at full width."},
++    )
++    fused_joint_qkv_prep: bool = field(
++        default=False,
++        metadata={"help": "Fuse cast+concat+RoPE+transpose of the joint-attention q/k/v into one Triton kernel per tensor and run flex without padding."},
++    )
++    fused_swiglu: bool = field(
++        default=False,
++        metadata={"help": "Fuse silu(gate)*up of Qwen3VLTextMLP into one Triton kernel (fwd+bwd), bit-exact with eager."},
++    )
++    fsdp_no_reshard_after_backward: bool = field(
++        default=False,
++        metadata={"help": "Keep layer parameters unsharded through backward (no re-all-gather for the second call of each joint layer); reshard explicitly after backward. Needs enable_full_shard=false, like the other fsdp_* scheduling switches."},
++    )
++    fsdp_forward_prefetch_depth: int = field(
++        default=0,
++        metadata={"help": "All-gather the first k joint layers before the forward of every micro-batch (see fsdp_prologue_under) and keep a lookahead of k layers in the layer loop. 0 = FSDP default."},
++    )
++    fsdp_prologue_under: str = field(
++        default="teacher",
++        metadata={"help": "Where the fsdp_forward_prefetch_depth prologue runs: 'teacher' = at the start of every micro-batch, its all-gathers overlap the online teacher models; 'vit' = right before the model forward, after all-gathering the units the forward calls before the layers (root, ViT, embed_tokens, task projections) in call order, so the layers' all-gathers overlap the ViT / prefix compute and the teacher phase is not needed (use it with teacher_cache_mode=read)."},
++    )
++    fsdp_rs_inflight_depth: int = field(
++        default=1,
++        metadata={"help": "Max number of FSDP2 reduce-scatters in flight in backward (1 = FSDP2 default: the compute stream waits for the previous reduce-scatter before issuing the next)."},
++    )
++    fused_joint_attn_split: bool = field(
++        default=False,
++        metadata={"help": "With fused_joint_qkv_prep: split the flex output into the VLM (bf16) and expert parts with one Triton kernel per direction."},
++    )
++    attention_dtype: Literal["fp32", "bf16"] = field(
++        default="fp32",
++        metadata={"help": "dtype of Q/K/V fed to the joint attention kernel. bf16 requires fused_joint_qkv_prep, fused_joint_attn_split and use_compile; the expert stream is cast back to its own dtype after attention."},
++    )
+ 
+ @dataclass
+ class MyDataArguments(DataArguments):
+@@ -330,10 +382,29 @@ class Arguments:
+     eval: "EvalArguments" = field(default_factory=EvalArguments)
+ 
+ 
++def log_teacher_cache_diff(micro_batch, online, step):
++    """Pop the cached teacher targets from micro_batch, log their largest difference from the
++    targets the teachers just computed and the fraction of elements that match exactly, and
++    return the cached targets."""
++    parts, out = [], {}
++    for key, ref in online.items():
++        cached = out[key] = micro_batch.pop(key).to(ref.dtype)
++        diff = (cached.float() - ref.float()).abs()
++        stats = torch.stack([diff.max(), -(cached == ref).float().mean(), ref.float().abs().max()])
++        dist.all_reduce(stats, op=dist.ReduceOp.MAX)
++        parts.append(f"{key} max|diff| {stats[0]:.3e} exact {-stats[1]:.6f} max|ref| {stats[2]:.3e}")
++    logger.info_rank0(f"TeacherCacheVerify step {step}: " + "; ".join(parts))
++    return out
++
++
+ def main():
+     args = parse_args(Arguments)
+     logger.info(f"Process rank: {args.train.global_rank}, world size: {args.train.world_size}")
+     logger.info_rank0(json.dumps(asdict(args), indent=2))
++    if args.train.fsdp_align_root and args.train.action_fp32:
++        # _fp32_linear reads action_out_proj's weight directly, and in its own FSDP2 unit that weight is sharded outside
++        # the unit's forward
++        raise ValueError("fsdp_align_root requires action_fp32=false")
+     torch.cuda.set_device(f"cuda:{args.train.local_rank}")
+     dist.init_process_group(backend="nccl")
+     helper.set_seed(args.train.seed, args.train.enable_full_determinism)
+@@ -379,6 +450,42 @@ def main():
+         config_kwargs=config_kwargs,
+         moe_implementation=getattr(args.model, 'moe_implementation', None),
+     )
++    if args.train.fused_joint_attn_split and not args.train.fused_joint_qkv_prep:
++        raise ValueError("fused_joint_attn_split requires fused_joint_qkv_prep (it splits the un-padded flex output)")
++    if args.train.fused_joint_qkv_prep:
++        # What QwenvlWithExpertV2Model.forward reads: a switch that does not arrive there (undeclared config field,
++        # attention_implementation other than flex_cached) would silently run the unfused path.
++        qcfg = model.model.qwenvl_with_expert.config
++        if not (
++            getattr(qcfg, "fused_joint_qkv_prep", False)
++            and qcfg.attention_implementation == "flex_cached"
++            and getattr(qcfg, "fused_joint_attn_split", False) == args.train.fused_joint_attn_split
++        ):
++            raise ValueError(
++                "fused_joint_qkv_prep/fused_joint_attn_split would not take effect: the model config has "
++                f"fused_joint_qkv_prep={getattr(qcfg, 'fused_joint_qkv_prep', None)}, "
++                f"fused_joint_attn_split={getattr(qcfg, 'fused_joint_attn_split', None)}, "
++                f"attention_implementation={qcfg.attention_implementation!r} (needs 'flex_cached')"
++            )
++    if args.train.attention_dtype != "fp32":
++        # same check for --train.attention_dtype (QwenvlWithExpertV2Model validates the combination)
++        qcfg = model.model.qwenvl_with_expert.config
++        got = getattr(qcfg, "attention_dtype", None)
++        if got != args.train.attention_dtype:
++            raise ValueError(f"attention_dtype would not take effect: the model config has attention_dtype={got!r}")
++        if args.train.attention_dtype == "bf16" and not args.train.use_compile:
++            # flex attention is a Triton kernel only under torch.compile (here: use_compile); outside it PyTorch runs the
++            # eager reference, which with bf16 Q/K/V rounds the logits, dP and Delta to bf16 (the compiled kernel keeps
++            # them in fp32) and ignores the kernel options
++            raise ValueError("attention_dtype=bf16 requires use_compile=true: without torch.compile flex attention runs "
++                             "PyTorch's eager reference, which rounds the attention logits and gradients to bf16")
++    if args.train.fused_swiglu:
++        from lingbotvla.ops.swiglu import apply_fused_swiglu
++        n_patched = apply_fused_swiglu(model)
++        n_layers = model.model.qwenvl_with_expert.qwenvl.config.text_config.num_hidden_layers
++        if n_patched != n_layers:
++            raise ValueError(f"fused_swiglu: patched {n_patched} Qwen3VLTextMLP modules, expected {n_layers}")
++        logger.info_rank0(f"fused_swiglu: patched {n_patched} Qwen3VLTextMLP modules")
+     use_depth_align = True if args.train.align_params != {} else False
+     use_future_depth = args.train.align_params.get('depth', {}).get('use_future_depth', False)
+     use_future_video = use_depth_align and args.train.align_params.get('use_future_video', False)
+@@ -387,6 +494,16 @@ def main():
+     future_video_loss_weight = 1.0
+     depth_loss_weight = 1.0
+     future_depth_loss_weight = 1.0
++    teacher_cache_mode = args.train.teacher_cache_mode if args.train.teacher_cache_dir else None
++    if teacher_cache_mode is not None:
++        video_align = args.train.align_params.get("video", {})
++        if not (use_depth_align and use_future_depth and use_future_video and args.data.data_name == "multi"):
++            raise ValueError("teacher_cache_dir supports depth + future depth + future video alignment on a multi dataset.")
++        if video_align.get("use_cls_loss", False) or not video_align.get("use_current_patch_loss", False):
++            raise ValueError("teacher_cache_dir caches the current and future DINO patch targets only.")
++        if getattr(args.data, "image_augment", False):
++            raise ValueError("teacher_cache_dir needs deterministic teacher inputs; image_augment must be off.")
++    moge_model = morgbd_model = None
+     if use_future_video:
+         if not args.data.use_future_image:
+             raise ValueError("align_params.use_future_video=True requires data.use_future_image=True.")
+@@ -404,15 +521,16 @@ def main():
+             raise ValueError(f"Only MoRGBD depth distillation is supported, got {depth_model_type!r}.")
+         depth_loss_weight = args.train.align_params.get("depth_loss_weight", 1.0)
+         future_depth_loss_weight = args.train.align_params.get("future_depth_loss_weight", 1.0)
+-        print('====Loading Depth Model====')
+-        moge_model, morgbd_model = build_depth_model(args.train.align_params)
+-        if args.train.use_compile:
+-            moge_model = torch.compile(moge_model)
+-            morgbd_model = torch.compile(morgbd_model)
++        if teacher_cache_mode != "read":
++            print('====Loading Depth Model====')
++            moge_model, morgbd_model = build_depth_model(args.train.align_params)
++            if args.train.use_compile:
++                moge_model = torch.compile(moge_model)
++                morgbd_model = torch.compile(morgbd_model)
+         if 'visual_dir' not in args.train.align_params or not args.train.align_params['visual_dir']:
+             args.train.align_params['visual_dir'] = os.path.join(args.train.output_dir, 'images')
+         os.makedirs(args.train.align_params['visual_dir'], exist_ok=True)
+-        if use_future_video:
++        if use_future_video and teacher_cache_mode != "read":
+             print('====Loading Future Video Model====')
+             video_teacher = build_video_model(args.train.align_params['video'])
+     from lingbotvla.utils.moe_utils import log_model_param_stats
+@@ -441,6 +559,50 @@ def main():
+             args.data.chunk_size = args.train.chunk_size
+             train_dataset = build_vla_dataset(dataset_config=args.data, model_config=args.model, config=model.config, processor=processor, use_depth_align=use_depth_align)
+             args.train.compute_train_steps(args.data.max_seq_len, args.data.train_size, len(train_dataset))
++            if teacher_cache_mode is not None:
++                cache_meta = teacher_cache.fingerprint(
++                    train_dataset,
++                    args.train.align_params,
++                    getattr(args.data, "image_augment", False),
++                    args.data.cameras,
++                )
++                if teacher_cache_mode == "build":
++                    del model
++                    helper.empty_cache()
++
++                    def compute_teacher_targets(batch):
++                        # Same calls as the training loop below.
++                        with torch.no_grad():
++                            with torch.autocast("cuda", dtype=torch.bfloat16):
++                                depth, _ = get_depth_target(depth_model_type, (moge_model, morgbd_model), batch["pil_images"])
++                                video = get_video_target(
++                                    video_teacher,
++                                    batch["pil_images"],
++                                    batch["future_pil_images"],
++                                    args.train.align_params["video"],
++                                    effective_fps=batch.get("future_video_effective_fps"),
++                                )
++                        return {"depth": depth, "video_current": video["current_patch"], "video_future": video["patch"]}
++
++                    teacher_cache.build_teacher_cache(
++                        train_dataset,
++                        compute_teacher_targets,
++                        args.train.teacher_cache_dir,
++                        cache_meta,
++                        rank=args.train.global_rank,
++                        world_size=args.train.world_size,
++                        batch_size=args.train.micro_batch_size,
++                        num_workers=args.data.num_workers,
++                        collate_fn=VLADataCollatorWithPacking(),
++                        barrier=dist.barrier,
++                    )
++                    dist.destroy_process_group()
++                    return
++                train_dataset = teacher_cache.TeacherCacheDataset(
++                    train_dataset,
++                    teacher_cache.TeacherCache(args.train.teacher_cache_dir, cache_meta),
++                    keep_teacher_images=teacher_cache_mode == "verify",
++                )
+         
+         train_dataloader = build_dataloader(
+             dataset=train_dataset,
+@@ -487,8 +649,80 @@ def main():
+         use_depth_align=use_depth_align,
+         split_fused_experts_from_decoder_fsdp=args.train.split_fused_experts_from_decoder_fsdp,
+         vlm_fsdp=args.train.vlm_fsdp,
++        use_compile=args.train.use_compile,
++        fsdp_align_root=args.train.fsdp_align_root,
+         use_future_image=args.data.use_future_image,
+     )
++    layer_comm = None
++    if args.train.fsdp_prologue_under not in ("teacher", "vit"):
++        raise ValueError(f"fsdp_prologue_under must be 'teacher' or 'vit', got {args.train.fsdp_prologue_under!r}")
++    if args.train.fsdp_prologue_under == "vit" and args.train.fsdp_forward_prefetch_depth == 0:
++        raise ValueError("fsdp_prologue_under=vit requires fsdp_forward_prefetch_depth > 0")
++    if args.train.fsdp_forward_prefetch_depth > 0 and args.train.fsdp_prologue_under == "teacher" and (
++            not use_depth_align or teacher_cache_mode == "read"):
++        logger.warning_rank0(f"fsdp_prologue_under=teacher but no teacher model runs before the forward "
++                             f"({'teacher_cache_mode=read' if use_depth_align else 'no depth alignment'}): the prologue's "
++                             f"layer all-gathers queue ahead of the ViT's; use fsdp_prologue_under=vit")
++    if args.train.fsdp_forward_prefetch_depth < 0 or args.train.fsdp_rs_inflight_depth < 1:
++        raise ValueError(f"need fsdp_forward_prefetch_depth >= 0 and fsdp_rs_inflight_depth >= 1, got "
++                         f"{args.train.fsdp_forward_prefetch_depth} and {args.train.fsdp_rs_inflight_depth}")
++    if args.train.enable_full_shard and (args.train.fsdp_no_reshard_after_backward or args.train.fsdp_forward_prefetch_depth > 0
++                                         or args.train.fsdp_rs_inflight_depth > 1):
++        # With reshard_after_forward, no re-gather would keep every layer unsharded from its first backward all-gather
++        # until after the backward (~13 GiB per rank here). Prefetch and reduce-scatters in flight were measured with full
++        # shard too: no speedup, ~2.4 GiB more reserved memory, and with both on the VLM gradients vary from run to run.
++        raise ValueError("fsdp_no_reshard_after_backward / fsdp_forward_prefetch_depth / fsdp_rs_inflight_depth "
++                         "require enable_full_shard=false")
++    if args.train.fsdp_no_reshard_after_backward or args.train.fsdp_forward_prefetch_depth > 0 or args.train.fsdp_rs_inflight_depth > 1:
++        if args.train.data_parallel_mode != "fsdp2":
++            raise ValueError("layer comm scheduling (fsdp_no_reshard_after_backward / fsdp_forward_prefetch_depth / "
++                             "fsdp_rs_inflight_depth) is FSDP2-only")
++        from torch.distributed.fsdp import FSDPModule
++        from lingbotvla.distributed.fsdp_layer_comm import LayerCommScheduler
++        from lingbotvla.distributed.torch_parallelize import _resolve
++        core = model.model.qwenvl_with_expert
++        # the module paths build_parallelize_model shards (Qwen3-VL, Qwen2.5-VL, legacy layout)
++        llm_layers, _ = _resolve(core.qwenvl, [("model", "language_model", "layers"), ("model", "layers"),
++                                               ("language_model", "model", "layers")])
++        if llm_layers is None:
++            raise RuntimeError("layer comm scheduling: could not locate the Qwen-VL decoder layers")
++        prefix_units = None
++        if args.train.fsdp_prologue_under == "vit":
++            # The FSDP units the forward all-gathers before the layer loop, in call order (embed_prefix): the root, the
++            # ViT (its parent unit owns pos_embed; then patch_embed, the blocks with the deepstack mergers after their
++            # blocks, the merger), embed_tokens and the two shared task projections, as build_parallelize_model shards
++            # them. A module that is not an FSDP unit belongs to an enclosing unit and is skipped.
++            visual, _ = _resolve(core.qwenvl, [("model", "visual"), ("visual",)])
++            embed_tokens, _ = _resolve(core.qwenvl, [("model", "language_model", "embed_tokens"), ("model", "embed_tokens"),
++                                                     ("language_model", "model", "embed_tokens")])
++            if visual is None or embed_tokens is None:
++                raise RuntimeError("fsdp_prologue_under=vit: could not locate the Qwen-VL vision tower / token embedding")
++            deepstack_at = list(getattr(visual, "deepstack_visual_indexes", []))
++            candidates = [model, visual, getattr(visual, "patch_embed", None)]
++            for j, block in enumerate(visual.blocks):
++                candidates.append(block)
++                if j in deepstack_at:
++                    candidates.append(visual.deepstack_merger_list[deepstack_at.index(j)])
++            candidates += [getattr(visual, "merger", None), embed_tokens,
++                           getattr(model.model, "current_shared_task_proj", None),
++                           getattr(model.model, "future_shared_task_proj", None)]
++            prefix_units = [m for m in candidates if isinstance(m, FSDPModule)]
++        layer_comm = LayerCommScheduler(
++            list(llm_layers),
++            list(core.qwen_expert.model.layers),
++            prefetch_depth=args.train.fsdp_forward_prefetch_depth,
++            no_reshard_after_backward=args.train.fsdp_no_reshard_after_backward,
++            prefix_units=prefix_units,
++            rs_inflight_depth=args.train.fsdp_rs_inflight_depth,
++        )
++        # the reduce-scatter wrapper patches FSDP2 class-wide: every FSDP2 unit of the model is checked before it is installed
++        layer_comm.configure(all_groups=[m._get_fsdp_state()._fsdp_param_group for m in model.modules()
++                                         if isinstance(m, FSDPModule) and m._get_fsdp_state()._fsdp_param_group is not None])
++        logger.info_rank0(f"LayerCommScheduler: depth={layer_comm.depth}, no_reshard_after_backward={layer_comm.no_reshard}, "
++                          f"{layer_comm.n} layers, prologue under {args.train.fsdp_prologue_under}"
++                          f"{f' after {len(layer_comm.prefix)} prefix units' if layer_comm.prefix else ''}, "
++                          f"reduce-scatters in flight {layer_comm.rs_inflight_depth}"
++                          f"{' (post_backward wrapper installed)' if layer_comm.rs_inflight is not None else ''}")
+     logger.info_rank0(model)
+     if args.train.use_compile:
+         model = torch.compile(model)
+@@ -728,6 +962,7 @@ def main():
+         for epoch_step in range(start_step, args.train.train_steps):
+             current_epoch_step_for_eval = epoch_step + 1
+             global_step += 1
++            data_wait_start = time.time()
+             try:
+                 micro_batches: List[Dict[str, Any]] = next(data_iterator)
+             except StopIteration:
+@@ -746,6 +981,7 @@ def main():
+             future_video_current_dino = None
+             future_video_current_rgb, future_video_target_rgb = None, None
+             ignore_batch_num = 0
++            data_wait_time = time.time() - data_wait_start
+             torch.cuda.synchronize()
+             start_time = time.time()
+             for micro_batch in micro_batches:
+@@ -759,8 +995,17 @@ def main():
+                     k: v.cuda(non_blocking=True) if isinstance(v, torch.Tensor) else v for k, v in micro_batch.items()
+                 }
+                 future_video_effective_fps = micro_batch.pop('future_video_effective_fps', None)
++                if layer_comm is not None and global_step > 1 and args.train.fsdp_prologue_under == "teacher":
++                    layer_comm.prologue()
+                 depth_forward_time = 0
+-                if use_depth_align:
++                if use_depth_align and teacher_cache_mode == "read":
++                    depth_start_time = time.time()
++                    depth_targets = micro_batch.pop("teacher_depth")
++                    future_depth_targets = micro_batch.pop("teacher_future_depth")
++                    future_video_targets = micro_batch.pop("teacher_video_future")
++                    future_video_current_dino = micro_batch.pop("teacher_video_current")
++                    depth_forward_time = time.time() - depth_start_time
++                elif use_depth_align:
+                     with torch.no_grad():
+                         depth_start_time = time.time()
+                         pil_images = micro_batch.pop('pil_images', None)
+@@ -789,7 +1034,24 @@ def main():
+                             future_video_current_rgb = pil_images
+                             future_video_target_rgb = future_pil_images
+                         depth_forward_time = time.time() - depth_start_time
++                    if teacher_cache_mode == "verify":
++                        cached = log_teacher_cache_diff(
++                            micro_batch,
++                            {
++                                "teacher_depth": depth_targets,
++                                "teacher_future_depth": future_depth_targets,
++                                "teacher_video_future": future_video_targets,
++                                "teacher_video_current": future_video_current_dino,
++                            },
++                            global_step,
++                        )
++                        depth_targets = cached["teacher_depth"]
++                        future_depth_targets = cached["teacher_future_depth"]
++                        future_video_targets = cached["teacher_video_future"]
++                        future_video_current_dino = cached["teacher_video_current"]
+ 
++                if layer_comm is not None and global_step > 1 and args.train.fsdp_prologue_under == "vit":
++                    layer_comm.prologue()  # its all-gathers run under the ViT / prefix compute
+                 with model_fwd_context:
+                     model_outputs = model(
+                         **micro_batch,
+@@ -830,6 +1092,19 @@ def main():
+ 
+                 with model_bwd_context:
+                     loss.backward()
++                if layer_comm is not None:
++                    if layer_comm.rs_inflight is not None:
++                        if global_step <= 3 and args.train.global_rank == 0:
++                            logger.info(f"rs_inflight: max pending {layer_comm.rs_inflight.max_pending}, depth {layer_comm.rs_inflight.depth}")
++                        layer_comm.rs_inflight.max_pending = 0
++                    if layer_comm.no_reshard and global_step <= 3 and args.train.global_rank == 0:
++                        _alloc_before = torch.cuda.memory_allocated()
++                    layer_comm.after_backward()
++                    if layer_comm.no_reshard and global_step <= 3 and args.train.global_rank == 0:
++                        _alloc_after = torch.cuda.memory_allocated()
++                        logger.info(f"layer_comm after_backward, step {global_step}: memory_allocated "
++                                    f"{_alloc_before / 2**30:.3f} -> {_alloc_after / 2**30:.3f} GiB "
++                                    f"(-{(_alloc_before - _alloc_after) / 2**30:.3f} GiB)")
+ 
+                 total_loss += loss.item()
+                 total_vla_loss += vla_loss.item()
+@@ -933,7 +1208,8 @@ def main():
+                 f"{expert_lr_str}"
+                 f"StepTime {delta_time:.3f}s, "
+                 f"Depth_Forward_Time {depth_forward_time: .3f}s, "
+-                f"Ignore_Batch_Num {ignore_batch_num}"
++                f"Ignore_Batch_Num {ignore_batch_num}, "
++                f"Data_Wait {data_wait_time:.3f}s"
+             )
+ 
+ 
+@@ -1066,7 +1342,7 @@ def main():
+                 # except Exception as e:
+                 #     logger.info_rank0(f"⚠️ Failed to write loss.jsonl: {e}")
+ 
+-                if use_depth_align:
++                if use_depth_align and teacher_cache_mode != "read":
+                     if global_step % args.train.align_params['visual_steps'] == 0:
+                         with torch.no_grad():
+                             if use_future_video:

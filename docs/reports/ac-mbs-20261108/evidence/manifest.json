@@ -1,0 +1,45 @@
+{
+  "created": "2026-11-08T16:15:00.084286",
+  "machine": "R6KD-CX8aaS-GPU-08",
+  "main": "be969b8fd117fb70550c5d4bf4bc328211b5b1b6",
+  "opt": "71a41bca6be05b15a170b5358e3f6b43c4523898",
+  "harness_files": {
+    "numa_entry.py": "a2c7b65d94d71f226e4c18581182c381f8d5e21323d8974f636b755b2df8194d",
+    "step_timer.py": "aaf175f59d51123b3b484f426c0157a181c405d02428425995cf58906a65571c",
+    "compare_loss.py": "2328fdf1c724413ba12733679946d1b2bca48aebb9304a1f9fc3e32b18cef0da",
+    "reproduce.sh": "a0be3ee70c9409ee67d89803bb9c233d26c13ca0b627593af17404ab7130b295",
+    "summarize.py": "c165c39f59d9d5fbad789dd48d9de2340a1627444ddd7be1f0fe1112e24b1664",
+    "README.md": "39be04b2737ad9d795e52a126db99459a0f9a1998bee888b52039440d5e11cb6",
+    "sequence.sh": "c26cea503adc77166eba609ebe9ae9db0f99113350ba4e5098864e58a72152e0",
+    "bench.sh": "0a3ca3569f97b5c32e576c2b08cc06bc065a26219c7a3e9ca2d7b4d265bdeab9"
+  },
+  "data_list": "/root/keddyj/LingBotVLA-Test/data-preparation/robotwin-clean50-image-training.txt",
+  "teacher_cache": "/raid/teacher_cache/robotwin_clean50_png",
+  "global_batch": 256,
+  "study_cells": {
+    "main_ac32": [
+      "main",
+      32,
+      1,
+      true
+    ],
+    "main_noac16": [
+      "main",
+      16,
+      2,
+      false
+    ],
+    "opt_ac32": [
+      "opt",
+      32,
+      1,
+      true
+    ],
+    "opt_noac16": [
+      "opt",
+      16,
+      2,
+      false
+    ]
+  }
+}

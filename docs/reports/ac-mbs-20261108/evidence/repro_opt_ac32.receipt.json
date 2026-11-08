@@ -1,0 +1,18 @@
+{
+  "run": "repro_opt_ac32",
+  "code": "opt",
+  "steps": 80,
+  "returncode": 0,
+  "rank_records": [
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80
+  ],
+  "passed": true,
+  "wall_seconds": 326.0979640483856
+}

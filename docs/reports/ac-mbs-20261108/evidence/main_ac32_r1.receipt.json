@@ -1,0 +1,18 @@
+{
+  "run": "main_ac32_r1",
+  "code": "main",
+  "steps": 200,
+  "returncode": 0,
+  "rank_records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "passed": true,
+  "wall_seconds": 1006.8380753993988
+}

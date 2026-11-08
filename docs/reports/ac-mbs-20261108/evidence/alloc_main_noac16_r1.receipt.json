@@ -1,0 +1,19 @@
+{
+  "run": "alloc_main_noac16_r1",
+  "code": "main",
+  "steps": 200,
+  "returncode": 0,
+  "rank_records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "passed": true,
+  "wall_seconds": 1220.017971277237,
+  "allocator": "expandable_segments:True"
+}

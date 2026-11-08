@@ -1,0 +1,17 @@
+{
+  "public_ref": "9dc0677921fcea287d75efd8547d65acd71f61f0",
+  "public_branch": "https://github.com/billamiable/lingbot-vla-v2/tree/bench-repro",
+  "byte_identical_files": {
+    "bench.sh": "0a3ca3569f97b5c32e576c2b08cc06bc065a26219c7a3e9ca2d7b4d265bdeab9",
+    "step_timer.py": "aaf175f59d51123b3b484f426c0157a181c405d02428425995cf58906a65571c",
+    "numa_entry.py": "a2c7b65d94d71f226e4c18581182c381f8d5e21323d8974f636b755b2df8194d",
+    "summarize.py": "c165c39f59d9d5fbad789dd48d9de2340a1627444ddd7be1f0fe1112e24b1664",
+    "compare_loss.py": "2328fdf1c724413ba12733679946d1b2bca48aebb9304a1f9fc3e32b18cef0da"
+  },
+  "statistics": {
+    "legacy": "steps 11-30 mean",
+    "qihan_report": "steps 31-80 median",
+    "decision": "steps 31-200 mean including all data stalls"
+  },
+  "timing_boundary": "Before next(data_iterator) through post-update logging; max across 8 ranks; CUDA synchronized"
+}

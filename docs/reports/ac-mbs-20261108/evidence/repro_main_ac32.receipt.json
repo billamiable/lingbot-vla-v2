@@ -1,0 +1,18 @@
+{
+  "run": "repro_main_ac32",
+  "code": "main",
+  "steps": 80,
+  "returncode": 0,
+  "rank_records": [
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80
+  ],
+  "passed": true,
+  "wall_seconds": 459.9118070602417
+}

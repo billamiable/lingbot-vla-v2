@@ -1,0 +1,14 @@
+{
+  "repro_main_ac32": {
+    "target_median_s": 4.527,
+    "median_s": 4.527622594498098,
+    "mean_s": 4.526495289290324,
+    "deviation_pct": 0.01375291579628346
+  },
+  "repro_opt_ac32": {
+    "target_median_s": 2.886,
+    "median_s": 2.9044342660345137,
+    "mean_s": 2.9047306200303136,
+    "deviation_pct": 0.6387479568438437
+  }
+}

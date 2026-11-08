@@ -1,0 +1,19 @@
+{
+  "run": "alloc_opt_noac16_r2",
+  "code": "opt",
+  "steps": 200,
+  "returncode": 0,
+  "rank_records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "passed": true,
+  "wall_seconds": 800.7373468875885,
+  "allocator": "expandable_segments:True"
+}

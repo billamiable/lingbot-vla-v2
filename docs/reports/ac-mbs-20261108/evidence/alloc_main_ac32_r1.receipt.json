@@ -1,0 +1,19 @@
+{
+  "run": "alloc_main_ac32_r1",
+  "code": "main",
+  "steps": 200,
+  "returncode": 0,
+  "rank_records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "passed": true,
+  "wall_seconds": 1030.1636743545532,
+  "allocator": "expandable_segments:True"
+}

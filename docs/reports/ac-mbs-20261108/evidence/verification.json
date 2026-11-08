@@ -1,0 +1,82 @@
+{
+  "passed": true,
+  "runs": {
+    "alloc_main_ac32_r1": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_main_ac32_r2": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_main_noac16_r1": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_main_noac16_r2": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_opt_ac32_r1": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_opt_ac32_r2": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_opt_noac16_r1": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    },
+    "alloc_opt_noac16_r2": {
+      "passed": true,
+      "steps_per_rank": 200,
+      "allocator": "expandable_segments:True"
+    }
+  },
+  "input_pairs": [
+    {
+      "a": "alloc_main_ac32_r1",
+      "b": "alloc_main_noac16_r1",
+      "compared_updates": 24,
+      "compared_tensor_fields": 312,
+      "differences": []
+    },
+    {
+      "a": "alloc_main_ac32_r2",
+      "b": "alloc_main_noac16_r2",
+      "compared_updates": 24,
+      "compared_tensor_fields": 312,
+      "differences": []
+    },
+    {
+      "a": "alloc_opt_ac32_r1",
+      "b": "alloc_opt_noac16_r1",
+      "compared_updates": 24,
+      "compared_tensor_fields": 360,
+      "differences": []
+    },
+    {
+      "a": "alloc_opt_ac32_r2",
+      "b": "alloc_opt_noac16_r2",
+      "compared_updates": 24,
+      "compared_tensor_fields": 360,
+      "differences": []
+    }
+  ],
+  "sources": {
+    "main": "be969b8fd117fb70550c5d4bf4bc328211b5b1b6",
+    "opt": "71a41bca6be05b15a170b5358e3f6b43c4523898"
+  },
+  "model_files_size_mtime_unchanged": 129,
+  "data_list_sha256": "5e81a32ec171260d782f381ffdb5020b6c80ecd2f623f33687d83b88a572ebdc",
+  "note": "Input fingerprints cover first three updates only; inventory compares size/mtime, not full weight hashes."
+}

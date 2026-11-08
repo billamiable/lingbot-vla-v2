@@ -1,0 +1,173 @@
+{
+  "config_checks": [
+    {
+      "run": "alloc_main_ac32_r1",
+      "micro": 32,
+      "ga": 1,
+      "global_batch": 256,
+      "checkpointing": true,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_main_ac32_r2",
+      "micro": 32,
+      "ga": 1,
+      "global_batch": 256,
+      "checkpointing": true,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_main_noac16_r1",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_main_noac16_r2",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_opt_ac32_r1",
+      "micro": 32,
+      "ga": 1,
+      "global_batch": 256,
+      "checkpointing": true,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_opt_ac32_r2",
+      "micro": 32,
+      "ga": 1,
+      "global_batch": 256,
+      "checkpointing": true,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_opt_noac16_r1",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "alloc_opt_noac16_r2",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "main_ac32_r1",
+      "micro": 32,
+      "ga": 1,
+      "global_batch": 256,
+      "checkpointing": true,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "main_noac16_r1",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "smoke_main_noac16",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    },
+    {
+      "run": "smoke_opt_noac16",
+      "micro": 16,
+      "ga": 2,
+      "global_batch": 256,
+      "checkpointing": false,
+      "optimizer": "dist_muon",
+      "lr": 0.0001,
+      "max_steps": 50000,
+      "passed": true
+    }
+  ],
+  "input_pairs": [
+    {
+      "a": "main_ac32_r1",
+      "b": "main_noac16_r1",
+      "compared_updates": 24,
+      "compared_tensor_fields": 312,
+      "differences": []
+    },
+    {
+      "a": "alloc_main_ac32_r1",
+      "b": "alloc_main_noac16_r1",
+      "compared_updates": 24,
+      "compared_tensor_fields": 312,
+      "differences": []
+    },
+    {
+      "a": "alloc_main_ac32_r2",
+      "b": "alloc_main_noac16_r2",
+      "compared_updates": 24,
+      "compared_tensor_fields": 312,
+      "differences": []
+    },
+    {
+      "a": "alloc_opt_ac32_r1",
+      "b": "alloc_opt_noac16_r1",
+      "compared_updates": 24,
+      "compared_tensor_fields": 360,
+      "differences": []
+    },
+    {
+      "a": "alloc_opt_ac32_r2",
+      "b": "alloc_opt_noac16_r2",
+      "compared_updates": 24,
+      "compared_tensor_fields": 360,
+      "differences": []
+    }
+  ]
+}
