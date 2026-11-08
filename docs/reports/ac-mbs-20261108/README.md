@@ -49,3 +49,7 @@ python3 driver.py study_alloc  # 四配置各两次、200次更新，统一expan
 ## 结果范围
 
 主比较只合并`alloc_`前缀的8次完整运行，默认分配器的OOM、smoke和复现记录独立保留。模型文件验证的是size/mtime，输入指纹仅覆盖前3次更新。200步训练健康检查不代表完整收敛或下游成功率验证。
+
+## Profiling归因
+
+[Profiling归因分析](profiling/report.md)通过通信事件计数和GPU活动区间分解，解释重算32 GA1为何更快。

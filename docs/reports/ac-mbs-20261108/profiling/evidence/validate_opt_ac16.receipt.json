@@ -1,0 +1,19 @@
+{
+  "run": "validate_opt_ac16",
+  "code": "opt",
+  "steps": 80,
+  "returncode": 0,
+  "rank_records": [
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80,
+    80
+  ],
+  "passed": true,
+  "wall_seconds": 391.47769236564636,
+  "allocator": "expandable_segments:True"
+}

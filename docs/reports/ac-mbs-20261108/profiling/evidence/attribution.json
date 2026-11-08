@@ -1,0 +1,272 @@
+{
+  "metrics": {
+    "main_ac16": {
+      "wall_s": 6.127370490333333,
+      "compute_union_s": 3.669684414672852,
+      "comm_without_compute_s": 2.112042287068685,
+      "memory_only_s": 0.02807799043782555,
+      "no_gpu_activity_s": 0.3175657981539713,
+      "all_kernel_count": 70497.875,
+      "counts": {
+        "allgather": 292,
+        "reducescatter": 292,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 7684712220.0,
+          "output_bytes": 61477697760.0
+        },
+        "reducescatter": {
+          "input_bytes": 51007257024.0,
+          "output_bytes": 6375907128.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 24,
+        "reducescatter": 24,
+        "alltoall": 24
+      }
+    },
+    "main_ac32": {
+      "wall_s": 4.6324014465416665,
+      "compute_union_s": 3.597439459777832,
+      "comm_without_compute_s": 0.7319719600219726,
+      "memory_only_s": 0.05388131608072918,
+      "no_gpu_activity_s": 0.2491087106611326,
+      "all_kernel_count": 43901.875,
+      "counts": {
+        "allgather": 146,
+        "reducescatter": 146,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 3842356110.0,
+          "output_bytes": 30738848880.0
+        },
+        "reducescatter": {
+          "input_bytes": 25503628512.0,
+          "output_bytes": 3187953564.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 24,
+        "reducescatter": 24,
+        "alltoall": 24
+      }
+    },
+    "main_noac16": {
+      "wall_s": 5.6979639083333335,
+      "compute_union_s": 2.955682695983887,
+      "comm_without_compute_s": 2.4517377889607745,
+      "memory_only_s": 0.012488307149251162,
+      "no_gpu_activity_s": 0.27805511623942064,
+      "all_kernel_count": 50087.875,
+      "counts": {
+        "allgather": 292,
+        "reducescatter": 292,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 7684712220.0,
+          "output_bytes": 61477697760.0
+        },
+        "reducescatter": {
+          "input_bytes": 51007257024.0,
+          "output_bytes": 6375907128.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 24,
+        "reducescatter": 24,
+        "alltoall": 24
+      }
+    },
+    "opt_ac16": {
+      "wall_s": 3.6676887192083334,
+      "compute_union_s": 2.738295818725586,
+      "comm_without_compute_s": 0.8166406506551106,
+      "memory_only_s": 0.010834758504231823,
+      "no_gpu_activity_s": 0.10191749132340493,
+      "all_kernel_count": 49935.875,
+      "counts": {
+        "allgather": 222,
+        "reducescatter": 366,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 4081288476.0,
+          "output_bytes": 32650307808.0
+        },
+        "reducescatter": {
+          "input_bytes": 51007257024.0,
+          "output_bytes": 6375907128.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 24,
+        "reducescatter": 24,
+        "alltoall": 24
+      }
+    },
+    "opt_ac32": {
+      "wall_s": 2.982348700208333,
+      "compute_union_s": 2.612017023030599,
+      "comm_without_compute_s": 0.2633070437215169,
+      "memory_only_s": 0.017678829203287765,
+      "no_gpu_activity_s": 0.08934580425292965,
+      "all_kernel_count": 32521.875,
+      "counts": {
+        "allgather": 111,
+        "reducescatter": 183,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 2040644238.0,
+          "output_bytes": 16325153904.0
+        },
+        "reducescatter": {
+          "input_bytes": 25503628512.0,
+          "output_bytes": 3187953564.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 22,
+        "reducescatter": 24,
+        "alltoall": 24
+      }
+    },
+    "opt_noac16": {
+      "wall_s": 3.5225641396666667,
+      "compute_union_s": 2.31890924407959,
+      "comm_without_compute_s": 1.1023636766560871,
+      "memory_only_s": 0.010863402262369795,
+      "no_gpu_activity_s": 0.0904278166686198,
+      "all_kernel_count": 37355.875,
+      "counts": {
+        "allgather": 222,
+        "reducescatter": 366,
+        "allreduce": 6,
+        "alltoall": 106
+      },
+      "payload": {
+        "allgather": {
+          "input_bytes": 4081288476.0,
+          "output_bytes": 32650307808.0
+        },
+        "reducescatter": {
+          "input_bytes": 51007257024.0,
+          "output_bytes": 6375907128.0
+        },
+        "alltoall": {
+          "input_bytes": 3812052224.0,
+          "output_bytes": 3812052224.0
+        }
+      },
+      "payload_complete_observations": {
+        "allgather": 24,
+        "reducescatter": 22,
+        "alltoall": 24
+      }
+    }
+  },
+  "comparisons": {
+    "main": {
+      "endpoint": {
+        "wall_s": -1.065562461791667,
+        "compute_union_s": 0.641756763793945,
+        "comm_without_compute_s": -1.7197658289388018,
+        "memory_only_s": 0.041393008931478015,
+        "no_gpu_activity_s": -0.028946405578288037
+      },
+      "checkpoint_fixed_mb": {
+        "wall_s": 0.4294065819999995,
+        "compute_union_s": 0.7140017186889649,
+        "comm_without_compute_s": -0.3396955018920895
+      },
+      "batch_fixed_ac": {
+        "wall_s": -1.4949690437916665,
+        "compute_union_s": -0.07224495489501992,
+        "comm_without_compute_s": -1.3800703270467123
+      }
+    },
+    "opt": {
+      "endpoint": {
+        "wall_s": -0.5402154394583336,
+        "compute_union_s": 0.29310777895100903,
+        "comm_without_compute_s": -0.8390566329345702,
+        "memory_only_s": 0.00681542694091797,
+        "no_gpu_activity_s": -0.0010820124156901562
+      },
+      "checkpoint_fixed_mb": {
+        "wall_s": 0.1451245795416667,
+        "compute_union_s": 0.41938657464599594,
+        "comm_without_compute_s": -0.28572302600097654
+      },
+      "batch_fixed_ac": {
+        "wall_s": -0.6853400190000003,
+        "compute_union_s": -0.1262787956949869,
+        "comm_without_compute_s": -0.5533336069335937
+      }
+    }
+  },
+  "unprofiled_controls": {
+    "main": {
+      "mean_31_80_s": 5.990466869864613,
+      "median_31_80_s": 5.990304893115535,
+      "records": [
+        80,
+        80,
+        80,
+        80,
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    "opt": {
+      "mean_31_80_s": 3.619510839469731,
+      "median_31_80_s": 3.6189427450299263,
+      "records": [
+        80,
+        80,
+        80,
+        80,
+        80,
+        80,
+        80,
+        80
+      ]
+    }
+  }
+}

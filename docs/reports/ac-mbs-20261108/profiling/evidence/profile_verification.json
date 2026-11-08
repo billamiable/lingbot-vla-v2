@@ -1,0 +1,100 @@
+{
+  "passed": true,
+  "runs": [
+    {
+      "run": "main_noac16",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "main_ac16",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "main_ac32",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "validate_main_ac16",
+      "steps_per_rank": 80,
+      "passed": true
+    },
+    {
+      "run": "opt_noac16",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "opt_ac16",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "opt_ac32",
+      "steps_per_rank": 60,
+      "passed": true
+    },
+    {
+      "run": "validate_opt_ac16",
+      "steps_per_rank": 80,
+      "passed": true
+    }
+  ],
+  "input_pairs": [
+    {
+      "code": "main",
+      "a": "noac16",
+      "b": "ac16",
+      "tensor_field_matches": 312,
+      "updates_times_ranks": 24
+    },
+    {
+      "code": "main",
+      "a": "noac16",
+      "b": "ac32",
+      "tensor_field_matches": 312,
+      "updates_times_ranks": 24
+    },
+    {
+      "code": "main",
+      "a": "noac16",
+      "b": "validate_ac16",
+      "tensor_field_matches": 312,
+      "updates_times_ranks": 24
+    },
+    {
+      "code": "opt",
+      "a": "noac16",
+      "b": "ac16",
+      "tensor_field_matches": 360,
+      "updates_times_ranks": 24
+    },
+    {
+      "code": "opt",
+      "a": "noac16",
+      "b": "ac32",
+      "tensor_field_matches": 360,
+      "updates_times_ranks": 24
+    },
+    {
+      "code": "opt",
+      "a": "noac16",
+      "b": "validate_ac16",
+      "tensor_field_matches": 360,
+      "updates_times_ranks": 24
+    }
+  ],
+  "trace_count": 48,
+  "thermal_slowdown_samples": {
+    "main_noac16": 0,
+    "main_ac16": 0,
+    "main_ac32": 0,
+    "validate_main_ac16": 0,
+    "opt_noac16": 0,
+    "opt_ac16": 0,
+    "opt_ac32": 0,
+    "validate_opt_ac16": 0
+  }
+}

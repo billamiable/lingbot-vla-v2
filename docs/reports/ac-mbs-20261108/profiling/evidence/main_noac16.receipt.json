@@ -1,0 +1,25 @@
+{
+  "run": "main_noac16",
+  "passed": true,
+  "counts": [
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60
+  ],
+  "traces": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "returncode": 0
+}

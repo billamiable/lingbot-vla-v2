@@ -1,0 +1,10 @@
+{
+  "phase/teacher_and_prepare": 1,
+  "phase/forward": 1,
+  "phase/backward": 1,
+  "phase/microbatch_finalize": 1,
+  "microbatch": 1,
+  "phase/optimizer.step": 1,
+  "phase/lr_scheduler.step": 1,
+  "phase/optimizer.zero_grad": 1
+}
