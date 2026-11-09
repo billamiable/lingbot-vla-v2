@@ -1,0 +1,76 @@
+Overwriting feature type 'VideoFrame' (VideoFrame -> VideoFrame)
+[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 23:02:11 >> Initializing parallel state... dp_size 1, dp_replicate_size 1, dp_shard_size 1,tp_size 1, pp_size 1, cp_size 1, ulysses_size 1
+[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 23:02:11 >> Device mesh: DeviceMesh('cuda', [0], mesh_dim_names=('dp_shard',))
+[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 23:02:11 >> EP FSDP device mesh: None
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_dynamo/variables/functions.py:1575: UserWarning: Dynamo detected a call to a `functools.lru_cache`-wrapped function. Dynamo ignores the cache wrapper and directly traces the wrapped function. Silent incorrectness is only a *potential* risk, not something we have observed. Enable TORCH_LOGS="+dynamo" for a DEBUG stack trace.
+  torch._dynamo.utils.warn_once(msg)
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:282: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-dynamo-20261109/probe.py:118: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:835.)
+  result.update(passed=True,stage='complete',loss=float(loss),captured_graphs=len(graphs))
+{"case": "joint_moe_precomputed_noac", "passed": true, "stage": "complete", "seconds": 8.57417368888855}
+/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_dynamo/variables/functions.py:1575: UserWarning: Dynamo detected a call to a `functools.lru_cache`-wrapped function. Dynamo ignores the cache wrapper and directly traces the wrapped function. Silent incorrectness is only a *potential* risk, not something we have observed. Enable TORCH_LOGS="+dynamo" for a DEBUG stack trace.
+  torch._dynamo.utils.warn_once(msg)
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/moe.py:43: UserWarning: Logical operators 'and' and 'or' are deprecated for non-scalar tensors; please use '&' or '|' instead
+  data < num_bins or data == NUM_BINS_LAST_UNUSED - 1,
+UserWarning: Enable tracemalloc to get the object allocation traceback
+{"case": "joint_moe_precomputed_ac", "passed": true, "stage": "complete", "seconds": 6.7149388790130615}

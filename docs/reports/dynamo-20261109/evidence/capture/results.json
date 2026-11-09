@@ -1,0 +1,167 @@
+[
+  {
+    "case": "vlm_qkv_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.3335328102111816,
+    "captured_graphs": 1,
+    "seconds": 0.45250821113586426
+  },
+  {
+    "case": "vlm_output_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.331287145614624,
+    "captured_graphs": 1,
+    "seconds": 0.06007051467895508
+  },
+  {
+    "case": "action_qkv_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.003254771232605,
+    "captured_graphs": 1,
+    "seconds": 0.08784222602844238
+  },
+  {
+    "case": "action_output_dense_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.3901870250701904,
+    "captured_graphs": 1,
+    "seconds": 0.04233264923095703
+  },
+  {
+    "case": "vlm_qkv_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.3335328102111816,
+    "captured_graphs": 1,
+    "seconds": 0.05414462089538574
+  },
+  {
+    "case": "vlm_output_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.331287145614624,
+    "captured_graphs": 1,
+    "seconds": 0.04002213478088379
+  },
+  {
+    "case": "action_qkv_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.003254771232605,
+    "captured_graphs": 1,
+    "seconds": 0.041739463806152344
+  },
+  {
+    "case": "action_output_dense_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.3901870250701904,
+    "captured_graphs": 1,
+    "seconds": 0.044785499572753906
+  },
+  {
+    "case": "joint_original_mask_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": false,
+    "stage": "capture_forward",
+    "passed": false,
+    "error_type": "Unsupported",
+    "error": "Skip calling `torch.compiler.disable()`d function\n  Explanation: Skip calling function `<function build_block_mask at 0x1550cdd00d60>` since it was wrapped with `torch.compiler.disable` (reason: None)\n  Hint: Remove the `torch.compiler.disable` call\n\n  Developer debug context: <function build_block_mask at 0x1550cdd00d60>\n\n\nfrom user code:\n   File \"/root/experiments/lingbot-dynamo-20261109/probe.py\", line 72, in joint\n    def joint(z,w):return j(inputs_embeds=[z,w],position_ids=position,attention_mask=mask,use_cache=False)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py\", line 423, in forward\n    _full_block_mask = build_block_mask(\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "seconds": 0.23890900611877441
+  },
+  {
+    "case": "joint_precomputed_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.0762734413146973,
+    "captured_graphs": 1,
+    "seconds": 0.4724588394165039
+  },
+  {
+    "case": "joint_precomputed_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.0762734413146973,
+    "captured_graphs": 1,
+    "seconds": 0.2828383445739746
+  },
+  {
+    "case": "action_output_moe_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "capture_forward",
+    "passed": false,
+    "error_type": "Unsupported",
+    "error": "Logger not supported for non-export cases. To avoid graph breaks caused by logger in compile-mode, it is recommended to disable logging by adding logging methods to config.ignore_logger_methods\n\nfrom user code:\n   File \"/root/experiments/lingbot-dynamo-20261109/probe.py\", line 71, in out_a\n    def out_a(z,t):return a(z,t,8,12,output_atten=True)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/modeling_layers.py\", line 94, in __call__\n    return super().__call__(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1773, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1784, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 425, in forward\n    out_emb = self.mlp(out_emb)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 335, in forward\n    final_hidden_states = self.experts(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 186, in forward\n    return fused_moe_forward(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py\", line 308, in fused_moe_forward\n    if get_parallel_state().ep_enabled:\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/distributed/parallel_state.py\", line 556, in get_parallel_state\n    logger.warning_once(\"Parallel state has not been initialized. returning default Single-process state.\")\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "seconds": 0.39134836196899414
+  },
+  {
+    "case": "action_output_moe_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "capture_forward",
+    "passed": false,
+    "error_type": "Unsupported",
+    "error": "Logger not supported for non-export cases. To avoid graph breaks caused by logger in compile-mode, it is recommended to disable logging by adding logging methods to config.ignore_logger_methods\n\nfrom user code:\n   File \"/root/experiments/lingbot-dynamo-20261109/probe.py\", line 71, in out_a\n    def out_a(z,t):return a(z,t,8,12,output_atten=True)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/modeling_layers.py\", line 93, in __call__\n    return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1773, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1784, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 425, in forward\n    out_emb = self.mlp(out_emb)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 335, in forward\n    final_hidden_states = self.experts(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 186, in forward\n    return fused_moe_forward(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py\", line 308, in fused_moe_forward\n    if get_parallel_state().ep_enabled:\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/distributed/parallel_state.py\", line 556, in get_parallel_state\n    logger.warning_once(\"Parallel state has not been initialized. returning default Single-process state.\")\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "seconds": 0.029314517974853516
+  },
+  {
+    "case": "joint_moe_precomputed_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "capture_forward",
+    "passed": false,
+    "error_type": "Unsupported",
+    "error": "Logger not supported for non-export cases. To avoid graph breaks caused by logger in compile-mode, it is recommended to disable logging by adding logging methods to config.ignore_logger_methods\n\nfrom user code:\n   File \"/root/experiments/lingbot-dynamo-20261109/probe.py\", line 72, in joint\n    def joint(z,w):return j(inputs_embeds=[z,w],position_ids=position,attention_mask=mask,use_cache=False)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py\", line 448, in forward\n    out_emb, router_logits = models[i].layers[layer_idx](\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/modeling_layers.py\", line 94, in __call__\n    return super().__call__(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1773, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1784, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 425, in forward\n    out_emb = self.mlp(out_emb)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 335, in forward\n    final_hidden_states = self.experts(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 186, in forward\n    return fused_moe_forward(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py\", line 308, in fused_moe_forward\n    if get_parallel_state().ep_enabled:\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/distributed/parallel_state.py\", line 556, in get_parallel_state\n    logger.warning_once(\"Parallel state has not been initialized. returning default Single-process state.\")\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "seconds": 0.19517755508422852
+  },
+  {
+    "case": "joint_moe_precomputed_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "capture_forward",
+    "passed": false,
+    "error_type": "Unsupported",
+    "error": "Logger not supported for non-export cases. To avoid graph breaks caused by logger in compile-mode, it is recommended to disable logging by adding logging methods to config.ignore_logger_methods\n\nfrom user code:\n   File \"/root/experiments/lingbot-dynamo-20261109/probe.py\", line 72, in joint\n    def joint(z,w):return j(inputs_embeds=[z,w],position_ids=position,attention_mask=mask,use_cache=False)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py\", line 448, in forward\n    out_emb, router_logits = models[i].layers[layer_idx](\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/modeling_layers.py\", line 93, in __call__\n    return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1773, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n  File \"/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py\", line 1784, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 425, in forward\n    out_emb = self.mlp(out_emb)\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 335, in forward\n    final_hidden_states = self.experts(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py\", line 186, in forward\n    return fused_moe_forward(\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py\", line 308, in fused_moe_forward\n    if get_parallel_state().ep_enabled:\n  File \"/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/distributed/parallel_state.py\", line 556, in get_parallel_state\n    logger.warning_once(\"Parallel state has not been initialized. returning default Single-process state.\")\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "seconds": 0.2130584716796875
+  }
+]

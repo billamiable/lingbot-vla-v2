@@ -1,0 +1,49 @@
+Traceback (most recent call last):
+  File "/root/experiments/lingbot-dynamo-20261109/probe.py", line 112, in run
+    output=compiled(*inputs)
+           ^^^^^^^^^^^^^^^^^
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 745, in compile_wrapper
+    raise e.with_traceback(None) from e.__cause__  # User compiler error
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch._dynamo.exc.Unsupported: Unsupported hasattr call
+  Explanation: Dynamo does not know how to trace the function `TritonKernelVariable()`
+  Hint: Avoid calling `hasattr(TritonKernelVariable, fn)` in your code.
+  Hint: It may be possible to write Dynamo tracing rules for this code. Please report an issue to PyTorch if you encounter this graph break often and it is causing performance issues.
+
+  Developer debug context: call_obj_hasattr TritonKernelVariable() fn
+
+
+from user code:
+   File "/root/experiments/lingbot-dynamo-20261109/probe.py", line 90, in joint
+    def joint(z,w):return j(inputs_embeds=[z,w],position_ids=position,attention_mask=mask,use_cache=False)
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py", line 448, in forward
+    out_emb, router_logits = models[i].layers[layer_idx](
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/modeling_layers.py", line 93, in __call__
+    return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py", line 425, in forward
+    out_emb = self.mlp(out_emb)
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py", line 335, in forward
+    final_hidden_states = self.experts(
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py", line 186, in forward
+    return fused_moe_forward(
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py", line 363, in fused_moe_forward
+    final_hidden_states = FusedMoeExpertFunction.apply(
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/fused_moe.py", line 58, in forward
+    fc1_1_output = group_gemm_same_nk(
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/kernel/group_gemm.py", line 207, in group_gemm_same_nk
+    group_gemm_same_nk_kernel[
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/jit.py", line 390, in <lambda>
+    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/utils/pretuned.py", line 62, in run
+    f"kernel [{qualified_name(self)}], performance may suffer."
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/utils/kernel.py", line 25, in qualified_name
+    return innermost_fn(fn).__qualname__
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/ops/group_gemm/utils/kernel.py", line 19, in innermost_fn
+    while hasattr(fn, "fn"):
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+

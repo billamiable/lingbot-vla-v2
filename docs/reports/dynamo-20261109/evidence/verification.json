@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "real_training_records": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "fsdp_control_observations": 24,
+  "joint_checkpoint_hops": 4,
+  "notes": "Inductor comparisons use the compiled no-checkpoint control; no whole-training numerical equivalence or speedup was tested."
+}
