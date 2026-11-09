@@ -1,0 +1,2 @@
+{"state": "running", "run": "real_main_ac32", "steps": 3, "command": ["bash", "/root/experiments/lingbot-dynamo-20261109/harness/bench.sh"], "timestamp": "2026-11-09T22:49:55.353452"}
+{"state": "finished", "run": "real_main_ac32", "code": "main", "steps": 3, "returncode": 0, "rank_records": [3, 3, 3, 3, 3, 3, 3, 3], "passed": true, "wall_seconds": 99.92117810249329, "allocator": "expandable_segments:True", "timestamp": "2026-11-09T22:51:35.274919"}

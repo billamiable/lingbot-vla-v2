@@ -1,0 +1,6 @@
+{
+  "torch": "2.8.0+cu128",
+  "transformers": "4.57.3",
+  "cuda": "12.8",
+  "skip_fsdp_hooks": true
+}

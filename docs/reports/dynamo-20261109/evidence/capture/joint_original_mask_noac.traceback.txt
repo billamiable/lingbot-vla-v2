@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/root/experiments/lingbot-dynamo-20261109/probe.py", line 94, in run
+    output=compiled(*inputs)
+           ^^^^^^^^^^^^^^^^^
+  File "/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 745, in compile_wrapper
+    raise e.with_traceback(None) from e.__cause__  # User compiler error
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch._dynamo.exc.Unsupported: Skip calling `torch.compiler.disable()`d function
+  Explanation: Skip calling function `<function build_block_mask at 0x1550cdd00d60>` since it was wrapped with `torch.compiler.disable` (reason: None)
+  Hint: Remove the `torch.compiler.disable` call
+
+  Developer debug context: <function build_block_mask at 0x1550cdd00d60>
+
+
+from user code:
+   File "/root/experiments/lingbot-dynamo-20261109/probe.py", line 72, in joint
+    def joint(z,w):return j(inputs_embeds=[z,w],position_ids=position,attention_mask=mask,use_cache=False)
+  File "/root/experiments/lingbot-ac-mbs-20261108/opt/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py", line 423, in forward
+    _full_block_mask = build_block_mask(
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+

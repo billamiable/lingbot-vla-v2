@@ -1,0 +1,46 @@
+[
+  {
+    "case": "action_output_moe_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.6878430843353271,
+    "captured_graphs": 1,
+    "seconds": 1.870668649673462
+  },
+  {
+    "case": "action_output_moe_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 1.6878430843353271,
+    "captured_graphs": 1,
+    "seconds": 0.17864632606506348
+  },
+  {
+    "case": "joint_moe_precomputed_noac",
+    "backend": "capture",
+    "checkpoint": false,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.3822882175445557,
+    "captured_graphs": 1,
+    "seconds": 0.7726030349731445
+  },
+  {
+    "case": "joint_moe_precomputed_ac",
+    "backend": "capture",
+    "checkpoint": true,
+    "precomputed_mask": true,
+    "stage": "complete",
+    "passed": true,
+    "loss": 2.3822882175445557,
+    "captured_graphs": 1,
+    "seconds": 0.4053165912628174
+  }
+]
