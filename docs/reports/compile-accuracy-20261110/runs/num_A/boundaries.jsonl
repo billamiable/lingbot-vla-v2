@@ -1,0 +1,96 @@
+{"name": "vlm.00.qkv.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.qkv.output.0", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.qkv.output.1", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.qkv.output.2", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.00.qkv.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.qkv.output.0", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.qkv.output.1", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.qkv.output.2", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.00.omlp.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.omlp.output", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.00.omlp.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.omlp.output.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.omlp.output.1", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.01.qkv.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.qkv.output.0", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.qkv.output.1", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.qkv.output.2", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.01.qkv.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.qkv.output.0", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.qkv.output.1", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.qkv.output.2", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.01.omlp.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.omlp.output", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.01.omlp.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.omlp.output.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.omlp.output.1", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.17.qkv.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.qkv.output.0", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.qkv.output.1", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.qkv.output.2", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.17.qkv.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.qkv.output.0", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.qkv.output.1", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.qkv.output.2", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.17.omlp.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.omlp.output", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.17.omlp.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.omlp.output.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.omlp.output.1", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.35.qkv.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.qkv.output.0", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.qkv.output.1", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.qkv.output.2", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.35.qkv.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.qkv.output.0", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.qkv.output.1", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.qkv.output.2", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.35.omlp.input.0", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.omlp.output", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.35.omlp.input.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.omlp.input.1", "shape": [32, 337, 4096], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.omlp.output.0", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.omlp.output.1", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.omlp.output.0.grad", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.omlp.output.1.grad", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.35.omlp.output.grad", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.35.qkv.output.2.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.qkv.output.1.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.35.qkv.output.0.grad", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.35.qkv.output.2.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.qkv.output.1.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.35.qkv.output.0.grad", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.17.omlp.output.0.grad", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.omlp.output.1.grad", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.17.omlp.output.grad", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.17.qkv.output.2.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.qkv.output.1.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.17.qkv.output.0.grad", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.17.qkv.output.2.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.qkv.output.1.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.17.qkv.output.0.grad", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.01.omlp.output.0.grad", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.omlp.output.1.grad", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.01.omlp.output.grad", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.01.qkv.output.2.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.qkv.output.1.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.01.qkv.output.0.grad", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.01.qkv.output.2.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.qkv.output.1.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.01.qkv.output.0.grad", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.00.omlp.output.0.grad", "shape": [32, 51, 768], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.omlp.output.1.grad", "shape": [1632, 32], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.00.omlp.output.grad", "shape": [32, 286, 2560], "dtype": "torch.bfloat16", "finite": true}
+{"name": "expert.00.qkv.output.2.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.qkv.output.1.grad", "shape": [32, 51, 8, 128], "dtype": "torch.float32", "finite": true}
+{"name": "expert.00.qkv.output.0.grad", "shape": [32, 51, 32, 128], "dtype": "torch.float32", "finite": true}
+{"name": "vlm.00.qkv.output.2.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.qkv.output.1.grad", "shape": [32, 286, 8, 128], "dtype": "torch.bfloat16", "finite": true}
+{"name": "vlm.00.qkv.output.0.grad", "shape": [32, 286, 32, 128], "dtype": "torch.bfloat16", "finite": true}

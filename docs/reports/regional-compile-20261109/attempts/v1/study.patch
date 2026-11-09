@@ -1,0 +1,82 @@
+diff --git a/lingbotvla/models/vla/lingbot_vla/flex_attention.py b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+index 913ee7d..31b7a38 100644
+--- a/lingbotvla/models/vla/lingbot_vla/flex_attention.py
++++ b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+@@ -218,8 +218,9 @@ def flex_attention_with_block_mask(
+     q_len_rounded = block_mask.shape[-2] if hasattr(block_mask, 'shape') else query_states.shape[2]
+     kv_len_rounded = block_mask.shape[-1] if hasattr(block_mask, 'shape') else key_states.shape[2]
+ 
+-    pad_q = q_len_rounded - query_states.shape[2]
+-    pad_k = kv_len_rounded - key_states.shape[2]
++    # Study-wide policy: match the handwritten prep path, no sequence padding.
++    pad_q = 0
++    pad_k = 0
+ 
+     if pad_q > 0:
+         query_states = F.pad(query_states, (0, 0, 0, pad_q), value=0.0)
+diff --git a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+index 41d826c..f863443 100644
+--- a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
++++ b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+@@ -425,6 +425,7 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+                             self.qwenvl.config.text_config.num_attention_heads,
+                             _full_len,
+                             _full_len,
++                            pad_to_block=False,
+                         )
+                     att_output = flex_attention_with_block_mask(
+                         query_states, key_states, value_states, _full_block_mask, query_states.shape[1]
+diff --git a/lingbotvla/ops/group_gemm/kernel/moe.py b/lingbotvla/ops/group_gemm/kernel/moe.py
+index 42c3d00..c64ac04 100644
+--- a/lingbotvla/ops/group_gemm/kernel/moe.py
++++ b/lingbotvla/ops/group_gemm/kernel/moe.py
+@@ -308,7 +308,7 @@ def moe_scatter(x: torch.Tensor, index: torch.Tensor, out_dtype=None):
+     topk = index.shape[1]
+     out_dtype = out_dtype or x.dtype
+     out = torch.empty(M * topk, N, dtype=out_dtype, device=x.device)
+-    assert lambda: index.unique().numel() == M * topk, "Holes in output?"
++    # Removed vacuous assert-lambda: its body was never executed in eager.
+ 
+     grid = lambda meta: (M, triton.cdiv(N, meta["BLOCK_N"]))  # noqa
+     with torch.cuda.device(x.device):
+diff --git a/regional_runtime.py b/regional_runtime.py
+new file mode 100644
+index 0000000..a3ad268
+--- /dev/null
++++ b/regional_runtime.py
+@@ -0,0 +1,21 @@
++"""Region compiler entry outside FSDP/checkpoint control logic, with per-rank compile receipts."""
++import json
++import os
++from pathlib import Path
++import torch
++
++
++def install_regional_compile(model, output_dir):
++    from lingbotvla.distributed.torch_parallelize import _resolve
++    core=model.model.qwenvl_with_expert
++    vlm,_=_resolve(core.qwenvl,[("model","language_model","layers"),("model","layers")])
++    expert=core.qwen_expert.model.layers
++    path=Path(output_dir).parent/f'region_compile_rank{os.environ.get("RANK","0")}.jsonl'
++    # A fullgraph error or cache-limit exception must fail the smoke test, not quietly run eager.
++    def backend(gm, example_inputs):
++        with path.open('a') as f:
++            f.write(json.dumps(dict(nodes=len(list(gm.graph.nodes)),targets=[str(n.target) for n in gm.graph.nodes if n.op.startswith('call')]))+'\n')
++        return torch._dynamo.lookup_backend('inductor')(gm,example_inputs)
++    for layer in list(vlm)+list(expert):
++        layer.forward=torch.compile(layer.forward,backend=backend,fullgraph=True,dynamic=False)
++    (Path(output_dir).parent/'region_install.json').write_text(json.dumps(dict(vlm_layers=len(vlm),expert_layers=len(expert),fullgraph=True),indent=2))
+diff --git a/tasks/vla/train_lingbotvla.py b/tasks/vla/train_lingbotvla.py
+index f530f90..0ee025b 100644
+--- a/tasks/vla/train_lingbotvla.py
++++ b/tasks/vla/train_lingbotvla.py
+@@ -724,6 +724,9 @@ def main():
+                           f"reduce-scatters in flight {layer_comm.rs_inflight_depth}"
+                           f"{' (post_backward wrapper installed)' if layer_comm.rs_inflight is not None else ''}")
+     logger.info_rank0(model)
++    if os.environ.get("LINGBOT_REGIONAL_COMPILE", "0") == "1":
++        from regional_runtime import install_regional_compile
++        install_regional_compile(model, args.train.output_dir)
+     if args.train.use_compile:
+         model = torch.compile(model)
+ 

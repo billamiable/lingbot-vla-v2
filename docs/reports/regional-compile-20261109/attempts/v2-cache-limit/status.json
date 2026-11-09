@@ -1,0 +1,5 @@
+{
+  "state": "error",
+  "error": "RuntimeError('Run failed: smoke_B')",
+  "time": "2026-11-09T23:48:52.214791"
+}

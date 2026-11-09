@@ -1,0 +1,63 @@
+{
+  "run": "train_B1",
+  "case": "B",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300
+  ],
+  "finite": true,
+  "region_graphs": [
+    144,
+    144,
+    144,
+    144,
+    144,
+    144,
+    144,
+    144
+  ],
+  "seconds": 1041.9727115631104,
+  "command": [
+    "bash",
+    "/root/experiments/lingbot-compile-accuracy-20261110/harness/bench.sh",
+    "--train.teacher_cache_dir",
+    "/raid/teacher_cache/robotwin_clean50_png",
+    "--train.fsdp_no_reshard_after_backward",
+    "true",
+    "--train.fsdp_forward_prefetch_depth",
+    "4",
+    "--train.fsdp_prologue_under",
+    "vit",
+    "--train.fsdp_rs_inflight_depth",
+    "4",
+    "--train.micro_batch_size",
+    "32",
+    "--train.gradient_accumulation_steps",
+    "1",
+    "--train.global_batch_size",
+    "256",
+    "--train.enable_gradient_checkpointing",
+    "true",
+    "--train.fused_joint_qkv_prep",
+    "false",
+    "--train.fused_swiglu",
+    "false"
+  ],
+  "flags": {
+    "regional": true,
+    "rms": false,
+    "swiglu": false,
+    "qkv": false,
+    "preserve_casts": false,
+    "numeric": false,
+    "profile": false
+  }
+}

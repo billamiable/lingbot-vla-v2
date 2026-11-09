@@ -1,0 +1,4 @@
+{
+  "state": "error",
+  "error": "RuntimeError({'state': 'failed', 'run': 'smoke_D', 'case': 'D', 'passed': False, 'returncode': 0, 'records': [0, 0, 0, 0, 0, 0, 0, 0], 'region_graphs': [2, 2, 2, 2, 2, 2, 2, 2], 'regional': True, 'manual': True, 'numeric': True, 'seconds': 55.946449518203735, 'time': '2026-11-09T23:56:27.790023'})"
+}

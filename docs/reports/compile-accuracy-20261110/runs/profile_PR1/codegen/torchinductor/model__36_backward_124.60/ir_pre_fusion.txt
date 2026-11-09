@@ -1,0 +1,89 @@
+op0: SchedulerNode(ComputedBuffer)
+op0.writes = [MemoryDep('buf0', c0, {c0: 655360})]
+op0.unmet_dependencies = []
+op0.met_dependencies = [MemoryDep('tangents_2', c0 + 655360*c1, {c0: 655360, c1: 32})]
+op0.outputs = [
+    buf0: ComputedBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.bfloat16, size=[256, 2560], stride=[2560, 1])
+    buf0.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op0.group.device = cuda:0
+op0.group.iteration = (655360, 32)
+op0.sizes = ([655360], [32])
+tangents_2_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 256, 2560], stride=[655360, 2560, 1])
+buf0_layout = FixedLayout('cuda:0', torch.bfloat16, size=[256, 2560], stride=[2560, 1])
+class op0_loop_body:
+    var_ranges = {p0: 655360, p1: 32}
+    index0 = p0 + 655360*p1
+    index1 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('tangents_2', get_index)
+        reduction = ops.reduction(torch.bfloat16, torch.bfloat16, 'sum', load)
+        get_index_1 = self.get_index('index1')
+        store_reduction = ops.store_reduction('buf0', get_index_1, reduction)
+        return store_reduction
+
+
+op1: SchedulerNode(ComputedBuffer)
+op1.writes = [MemoryDep('buf1', c0, {c0: 23429120})]
+op1.unmet_dependencies = []
+op1.met_dependencies = 
+    [   MemoryDep('tangents_1', 184320*c0 + c1 - 2560, {c0: 32, c1: 732160}),
+        MemoryDep('tangents_1', 184320*c0 + c1 - 527360, {c0: 32, c1: 732160})]
+op1.outputs = [
+    buf1: ComputedBuffer
+    buf1.layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+    buf1.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op1.group.device = cuda:0
+op1.group.iteration = (23429120, 1)
+op1.sizes = ([32, 286, 2560], [])
+tangents_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 72, 2560], stride=[184320, 2560, 1])
+tangents_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 72, 2560], stride=[184320, 2560, 1])
+buf1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+class op1_loop_body:
+    var_ranges = {p0: 32, p1: 286, p2: 2560}
+    index0 = p1
+    index1 = 184320*p0 + 2560*p1 + p2 - 527360
+    index2 = 184320*p0 + 2560*p1 + p2 - 2560
+    index3 = 732160*p0 + 2560*p1 + p2
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        index_expr = ops.index_expr(get_index, torch.int64)
+        constant = ops.constant(270, torch.int64)
+        ge = ops.ge(index_expr, constant)
+        get_index_1 = self.get_index('index0')
+        index_expr_1 = ops.index_expr(get_index_1, torch.int64)
+        constant_1 = ops.constant(278, torch.int64)
+        lt = ops.lt(index_expr_1, constant_1)
+        and_ = ops.and_(ge, lt)
+        masked_subblock1 = self.masked_subblock1(and_, 0.0)
+        constant_2 = ops.constant(0.0, torch.bfloat16)
+        where = ops.where(and_, masked_subblock1, constant_2)
+        get_index_2 = self.get_index('index0')
+        index_expr_2 = ops.index_expr(get_index_2, torch.int64)
+        constant_3 = ops.constant(1, torch.int64)
+        ge_1 = ops.ge(index_expr_2, constant_3)
+        get_index_3 = self.get_index('index0')
+        index_expr_3 = ops.index_expr(get_index_3, torch.int64)
+        constant_4 = ops.constant(65, torch.int64)
+        lt_1 = ops.lt(index_expr_3, constant_4)
+        and__1 = ops.and_(ge_1, lt_1)
+        masked_subblock2 = self.masked_subblock2(and__1, 0.0)
+        constant_5 = ops.constant(0.0, torch.bfloat16)
+        where_1 = ops.where(and__1, masked_subblock2, constant_5)
+        add = ops.add(where, where_1)
+        get_index_4 = self.get_index('index3')
+        store = ops.store('buf1', get_index_4, add, None)
+        return store
+    def masked_subblock1(self, ops):
+        get_index = self.get_index('index1')
+        load = ops.load('tangents_1', get_index)
+        return load
+    def masked_subblock2(self, ops):
+        get_index = self.get_index('index2')
+        load = ops.load('tangents_1', get_index)
+        return load
+
+

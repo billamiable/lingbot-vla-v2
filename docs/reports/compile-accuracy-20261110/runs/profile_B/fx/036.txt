@@ -1,0 +1,84 @@
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "bf16[32, 286, 2560]", L_forward_self_modules_self_attn_modules_q_proj_parameters_weight_: "bf16[4096, 2560]", L_forward_self_modules_input_layernorm_parameters_weight_: "bf16[2560]", L_forward_self_modules_self_attn_modules_q_norm_parameters_weight_: "bf16[128]", L_forward_self_modules_self_attn_modules_k_proj_parameters_weight_: "bf16[1024, 2560]", L_forward_self_modules_self_attn_modules_k_norm_parameters_weight_: "bf16[128]", L_forward_self_modules_self_attn_modules_v_proj_parameters_weight_: "bf16[1024, 2560]"):
+        l_args_0_ = L_args_0_
+        l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_q_proj_parameters_weight_
+        l_forward_self_modules_input_layernorm_parameters_weight_ = L_forward_self_modules_input_layernorm_parameters_weight_
+        l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_ = L_forward_self_modules_self_attn_modules_q_norm_parameters_weight_
+        l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_k_proj_parameters_weight_
+        l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_ = L_forward_self_modules_self_attn_modules_k_norm_parameters_weight_
+        l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_v_proj_parameters_weight_
+        
+         # File: /root/experiments/lingbot-compile-accuracy-20261110/src/regional_runtime.py:36 in checkpointed, code: return checkpoint(forward,*args,use_reentrant=False,**kwargs)
+        wrap_body_0 = self.wrap_body_0
+        tag_activation_checkpoint = torch.ops.higher_order.tag_activation_checkpoint(wrap_body_0, l_args_0_, l_forward_self_modules_input_layernorm_parameters_weight_, l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_, l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_, l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_, use_reentrant = False);  wrap_body_0 = l_args_0_ = l_forward_self_modules_input_layernorm_parameters_weight_ = l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_ = l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_ = l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = None
+        getitem: "bf16[32, 286, 32, 128]" = tag_activation_checkpoint[0]
+        getitem_1: "bf16[32, 286, 8, 128]" = tag_activation_checkpoint[1]
+        getitem_2: "bf16[32, 286, 8, 128]" = tag_activation_checkpoint[2];  tag_activation_checkpoint = None
+        return (getitem, getitem_1, getitem_2)
+        
+    class wrap_body_0(torch.nn.Module):
+        def forward(self, l_args_0_: "bf16[32, 286, 2560]", l_forward_self_modules_input_layernorm_parameters_weight_: "bf16[2560]", l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_: "bf16[4096, 2560]", l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_: "bf16[128]", l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_: "bf16[1024, 2560]", l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_: "bf16[128]", l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_: "bf16[1024, 2560]"):
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:180 in forward, code: hidden_states = hidden_states.to(param_dtype)
+            hidden_states: "bf16[32, 286, 2560]" = l_args_0_.to(torch.bfloat16);  l_args_0_ = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:349 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_1: "f32[32, 286, 2560]" = hidden_states.to(torch.float32);  hidden_states = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:350 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_1: "f32[32, 286, 2560]" = hidden_states_1.pow(2)
+            variance: "f32[32, 286, 1]" = pow_1.mean(-1, keepdim = True);  pow_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:351 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add: "f32[32, 286, 1]" = variance + 1e-06;  variance = None
+            rsqrt: "f32[32, 286, 1]" = torch.rsqrt(add);  add = None
+            hidden_states_2: "f32[32, 286, 2560]" = hidden_states_1 * rsqrt;  hidden_states_1 = rsqrt = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:352 in forward, code: return self.weight * hidden_states.to(input_dtype)
+            to_2: "bf16[32, 286, 2560]" = hidden_states_2.to(torch.bfloat16);  hidden_states_2 = None
+            hidden_states_3: "bf16[32, 286, 2560]" = l_forward_self_modules_input_layernorm_parameters_weight_ * to_2;  l_forward_self_modules_input_layernorm_parameters_weight_ = to_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:187 in forward, code: query_state = self.self_attn.q_norm(self.self_attn.q_proj(hidden_states).view(hidden_shape))
+            linear: "bf16[32, 286, 4096]" = torch._C._nn.linear(hidden_states_3, l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_, None);  l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = None
+            view: "bf16[32, 286, 32, 128]" = linear.view((32, 286, -1, 128));  linear = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:349 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_4: "f32[32, 286, 32, 128]" = view.to(torch.float32);  view = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:350 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_2: "f32[32, 286, 32, 128]" = hidden_states_4.pow(2)
+            variance_1: "f32[32, 286, 32, 1]" = pow_2.mean(-1, keepdim = True);  pow_2 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:351 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add_1: "f32[32, 286, 32, 1]" = variance_1 + 1e-06;  variance_1 = None
+            rsqrt_1: "f32[32, 286, 32, 1]" = torch.rsqrt(add_1);  add_1 = None
+            hidden_states_5: "f32[32, 286, 32, 128]" = hidden_states_4 * rsqrt_1;  hidden_states_4 = rsqrt_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:352 in forward, code: return self.weight * hidden_states.to(input_dtype)
+            to_4: "bf16[32, 286, 32, 128]" = hidden_states_5.to(torch.bfloat16);  hidden_states_5 = None
+            query_state: "bf16[32, 286, 32, 128]" = l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_ * to_4;  l_forward_self_modules_self_attn_modules_q_norm_parameters_weight_ = to_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:188 in forward, code: key_state = self.self_attn.k_norm(self.self_attn.k_proj(hidden_states).view(hidden_shape))
+            linear_1: "bf16[32, 286, 1024]" = torch._C._nn.linear(hidden_states_3, l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_, None);  l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = None
+            view_1: "bf16[32, 286, 8, 128]" = linear_1.view((32, 286, -1, 128));  linear_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:349 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_6: "f32[32, 286, 8, 128]" = view_1.to(torch.float32);  view_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:350 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_3: "f32[32, 286, 8, 128]" = hidden_states_6.pow(2)
+            variance_2: "f32[32, 286, 8, 1]" = pow_3.mean(-1, keepdim = True);  pow_3 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:351 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add_2: "f32[32, 286, 8, 1]" = variance_2 + 1e-06;  variance_2 = None
+            rsqrt_2: "f32[32, 286, 8, 1]" = torch.rsqrt(add_2);  add_2 = None
+            hidden_states_7: "f32[32, 286, 8, 128]" = hidden_states_6 * rsqrt_2;  hidden_states_6 = rsqrt_2 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:352 in forward, code: return self.weight * hidden_states.to(input_dtype)
+            to_6: "bf16[32, 286, 8, 128]" = hidden_states_7.to(torch.bfloat16);  hidden_states_7 = None
+            key_state: "bf16[32, 286, 8, 128]" = l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_ * to_6;  l_forward_self_modules_self_attn_modules_k_norm_parameters_weight_ = to_6 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:189 in forward, code: value_state = self.self_attn.v_proj(hidden_states).view(hidden_shape)
+            linear_2: "bf16[32, 286, 1024]" = torch._C._nn.linear(hidden_states_3, l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_, None);  hidden_states_3 = l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = None
+            value_state: "bf16[32, 286, 8, 128]" = linear_2.view((32, 286, -1, 128));  linear_2 = None
+            return (query_state, key_state, value_state)
+            

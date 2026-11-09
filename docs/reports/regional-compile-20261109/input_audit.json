@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "comparisons": [
+    {
+      "case": "B",
+      "matched_tensor_fields": 408,
+      "updates_times_ranks": 24
+    },
+    {
+      "case": "C",
+      "matched_tensor_fields": 408,
+      "updates_times_ranks": 24
+    },
+    {
+      "case": "D",
+      "matched_tensor_fields": 408,
+      "updates_times_ranks": 24
+    },
+    {
+      "case": "A_repeat",
+      "matched_tensor_fields": 408,
+      "updates_times_ranks": 24
+    }
+  ]
+}

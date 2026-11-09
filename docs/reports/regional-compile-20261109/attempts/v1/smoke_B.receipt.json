@@ -1,0 +1,30 @@
+{
+  "run": "smoke_B",
+  "case": "B",
+  "passed": false,
+  "returncode": 0,
+  "records": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "region_graphs": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "regional": true,
+  "manual": false,
+  "numeric": true,
+  "seconds": 69.53244709968567
+}

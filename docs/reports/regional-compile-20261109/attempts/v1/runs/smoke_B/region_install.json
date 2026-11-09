@@ -1,0 +1,5 @@
+{
+  "vlm_layers": 36,
+  "expert_layers": 36,
+  "fullgraph": true
+}

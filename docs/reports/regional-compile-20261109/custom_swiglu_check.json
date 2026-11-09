@@ -1,0 +1,14 @@
+[
+  {
+    "name": "custom",
+    "output_equal": true,
+    "grad_gate_equal": true,
+    "grad_up_equal": true
+  },
+  {
+    "name": "compiled_checkpoint",
+    "output_equal": true,
+    "grad_gate_equal": true,
+    "grad_up_equal": true
+  }
+]

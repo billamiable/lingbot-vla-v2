@@ -1,0 +1,65 @@
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "bf16[32, 286, 2560]", L_args_1_: "bf16[32, 337, 4096]", L_forward_self_modules_self_attn_modules_o_proj_parameters_weight_: "bf16[2560, 4096]", L_forward_self_modules_post_attention_layernorm_parameters_weight_: "bf16[2560]", L_forward_self_modules_mlp_modules_gate_proj_parameters_weight_: "bf16[9728, 2560]", L_forward_self_modules_mlp_modules_up_proj_parameters_weight_: "bf16[9728, 2560]", L_forward_self_modules_mlp_modules_down_proj_parameters_weight_: "bf16[2560, 9728]"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_o_proj_parameters_weight_
+        l_forward_self_modules_post_attention_layernorm_parameters_weight_ = L_forward_self_modules_post_attention_layernorm_parameters_weight_
+        l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_gate_proj_parameters_weight_
+        l_forward_self_modules_mlp_modules_up_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_up_proj_parameters_weight_
+        l_forward_self_modules_mlp_modules_down_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_down_proj_parameters_weight_
+        
+         # File: /root/experiments/lingbot-compile-accuracy-20261110/src/regional_runtime.py:36 in checkpointed, code: return checkpoint(forward,*args,use_reentrant=False,**kwargs)
+        wrap_body_0 = self.wrap_body_0
+        tag_activation_checkpoint = torch.ops.higher_order.tag_activation_checkpoint(wrap_body_0, l_args_0_, l_args_1_, l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_, l_forward_self_modules_post_attention_layernorm_parameters_weight_, l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_, l_forward_self_modules_mlp_modules_up_proj_parameters_weight_, l_forward_self_modules_mlp_modules_down_proj_parameters_weight_, use_reentrant = False);  wrap_body_0 = l_args_0_ = l_args_1_ = l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_parameters_weight_ = l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_ = l_forward_self_modules_mlp_modules_up_proj_parameters_weight_ = l_forward_self_modules_mlp_modules_down_proj_parameters_weight_ = None
+        getitem: "bf16[32, 286, 2560]" = tag_activation_checkpoint[0];  tag_activation_checkpoint = None
+        return (getitem,)
+        
+    class wrap_body_0(torch.nn.Module):
+        def forward(self, l_args_0_: "bf16[32, 286, 2560]", l_args_1_: "bf16[32, 337, 4096]", l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_: "bf16[2560, 4096]", l_forward_self_modules_post_attention_layernorm_parameters_weight_: "bf16[2560]", l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_: "bf16[9728, 2560]", l_forward_self_modules_mlp_modules_up_proj_parameters_weight_: "bf16[9728, 2560]", l_forward_self_modules_mlp_modules_down_proj_parameters_weight_: "bf16[2560, 9728]"):
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:180 in forward, code: hidden_states = hidden_states.to(param_dtype)
+            hidden_states: "bf16[32, 286, 2560]" = l_args_0_.to(torch.bfloat16);  l_args_0_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:182 in forward, code: att_output = att_output.to(param_dtype)
+            att_output: "bf16[32, 337, 4096]" = l_args_1_.to(torch.bfloat16);  l_args_1_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:195 in forward, code: out_emb = self.self_attn.o_proj(att_output[:, start:end])
+            getitem: "bf16[32, 286, 4096]" = att_output[(slice(None, None, None), slice(0, 286, None))];  att_output = None
+            out_emb: "bf16[32, 286, 2560]" = torch._C._nn.linear(getitem, l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_, None);  getitem = l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:196 in forward, code: out_emb += hidden_states
+            out_emb += hidden_states;  out_emb_1: "bf16[32, 286, 2560]" = out_emb;  out_emb = hidden_states = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:197 in forward, code: after_first_residual = out_emb.clone()
+            after_first_residual: "bf16[32, 286, 2560]" = out_emb_1.clone()
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:349 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_1: "f32[32, 286, 2560]" = out_emb_1.to(torch.float32);  out_emb_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:350 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_1: "f32[32, 286, 2560]" = hidden_states_1.pow(2)
+            variance: "f32[32, 286, 1]" = pow_1.mean(-1, keepdim = True);  pow_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:351 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add: "f32[32, 286, 1]" = variance + 1e-06;  variance = None
+            rsqrt: "f32[32, 286, 1]" = torch.rsqrt(add);  add = None
+            hidden_states_2: "f32[32, 286, 2560]" = hidden_states_1 * rsqrt;  hidden_states_1 = rsqrt = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:352 in forward, code: return self.weight * hidden_states.to(input_dtype)
+            to_3: "bf16[32, 286, 2560]" = hidden_states_2.to(torch.bfloat16);  hidden_states_2 = None
+            out_emb_2: "bf16[32, 286, 2560]" = l_forward_self_modules_post_attention_layernorm_parameters_weight_ * to_3;  l_forward_self_modules_post_attention_layernorm_parameters_weight_ = to_3 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:472 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            linear_1: "bf16[32, 286, 9728]" = torch._C._nn.linear(out_emb_2, l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_, None);  l_forward_self_modules_mlp_modules_gate_proj_parameters_weight_ = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/activations.py:99 in forward, code: return nn.functional.silu(input)
+            silu: "bf16[32, 286, 9728]" = torch.nn.functional.silu(linear_1);  linear_1 = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/models/qwen3_vl/modeling_qwen3_vl.py:472 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            linear_2: "bf16[32, 286, 9728]" = torch._C._nn.linear(out_emb_2, l_forward_self_modules_mlp_modules_up_proj_parameters_weight_, None);  out_emb_2 = l_forward_self_modules_mlp_modules_up_proj_parameters_weight_ = None
+            mul_2: "bf16[32, 286, 9728]" = silu * linear_2;  silu = linear_2 = None
+            down_proj: "bf16[32, 286, 2560]" = torch._C._nn.linear(mul_2, l_forward_self_modules_mlp_modules_down_proj_parameters_weight_, None);  mul_2 = l_forward_self_modules_mlp_modules_down_proj_parameters_weight_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen3vl_in_vla.py:200 in forward, code: out_emb += after_first_residual
+            down_proj += after_first_residual;  out_emb_3: "bf16[32, 286, 2560]" = down_proj;  down_proj = after_first_residual = None
+            return (out_emb_3,)
+            

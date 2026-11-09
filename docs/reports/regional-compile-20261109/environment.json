@@ -1,0 +1,18 @@
+{
+  "python": "3.12.15 (main, Oct  6 2026, 23:50:18) [GCC 15.3.0]",
+  "torch": "2.8.0+cu128",
+  "cuda": "12.8",
+  "transformers": "4.57.3",
+  "triton": "3.4.0",
+  "platform": "Linux-5.15.0-1069-nvidia-x86_64-with-glibc2.35",
+  "gpu": [
+    "0, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "1, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "2, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "3, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "4, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "5, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "6, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05",
+    "7, NVIDIA Graphics Device, 0x2BB310DE, 73415 MiB, 580.95.05"
+  ]
+}

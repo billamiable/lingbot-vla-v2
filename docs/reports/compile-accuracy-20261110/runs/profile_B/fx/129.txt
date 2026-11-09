@@ -1,0 +1,78 @@
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[32, 51, 768]", L_kwargs_ada_cond_: "f32[32, 768]", L_forward_self_modules_self_attn_modules_q_proj_parameters_weight_: "f32[4096, 768]", L_forward_self_modules_input_layernorm_parameters_weight_: "f32[768]", L_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_: "f32[768, 768]", L_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_: "f32[768]", L_forward_self_modules_input_layernorm_modules_beta_parameters_weight_: "f32[768, 768]", L_forward_self_modules_input_layernorm_modules_beta_parameters_bias_: "f32[768]", L_forward_self_modules_self_attn_modules_q_proj_parameters_bias_: "f32[4096]", L_forward_self_modules_self_attn_modules_k_proj_parameters_weight_: "f32[1024, 768]", L_forward_self_modules_self_attn_modules_k_proj_parameters_bias_: "f32[1024]", L_forward_self_modules_self_attn_modules_v_proj_parameters_weight_: "f32[1024, 768]", L_forward_self_modules_self_attn_modules_v_proj_parameters_bias_: "f32[1024]"):
+        l_args_0_ = L_args_0_
+        l_kwargs_ada_cond_ = L_kwargs_ada_cond_
+        l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_q_proj_parameters_weight_
+        l_forward_self_modules_input_layernorm_parameters_weight_ = L_forward_self_modules_input_layernorm_parameters_weight_
+        l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_ = L_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_
+        l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_ = L_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_
+        l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_ = L_forward_self_modules_input_layernorm_modules_beta_parameters_weight_
+        l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_ = L_forward_self_modules_input_layernorm_modules_beta_parameters_bias_
+        l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_ = L_forward_self_modules_self_attn_modules_q_proj_parameters_bias_
+        l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_k_proj_parameters_weight_
+        l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_ = L_forward_self_modules_self_attn_modules_k_proj_parameters_bias_
+        l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_v_proj_parameters_weight_
+        l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_ = L_forward_self_modules_self_attn_modules_v_proj_parameters_bias_
+        
+         # File: /root/experiments/lingbot-compile-accuracy-20261110/src/regional_runtime.py:36 in checkpointed, code: return checkpoint(forward,*args,use_reentrant=False,**kwargs)
+        wrap_body_0 = self.wrap_body_0
+        tag_activation_checkpoint = torch.ops.higher_order.tag_activation_checkpoint(wrap_body_0, l_args_0_, l_kwargs_ada_cond_, l_forward_self_modules_input_layernorm_parameters_weight_, l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_, l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_, l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_, l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_, l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_, l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_, l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_, use_reentrant = False);  wrap_body_0 = l_args_0_ = l_kwargs_ada_cond_ = l_forward_self_modules_input_layernorm_parameters_weight_ = l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_ = l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_ = l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_ = l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_ = l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_ = l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_ = l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_ = None
+        getitem: "f32[32, 51, 32, 128]" = tag_activation_checkpoint[0]
+        getitem_1: "f32[32, 51, 8, 128]" = tag_activation_checkpoint[1]
+        getitem_2: "f32[32, 51, 8, 128]" = tag_activation_checkpoint[2];  tag_activation_checkpoint = None
+        return (getitem, getitem_1, getitem_2)
+        
+    class wrap_body_0(torch.nn.Module):
+        def forward(self, l_args_0_: "f32[32, 51, 768]", l_kwargs_ada_cond_: "f32[32, 768]", l_forward_self_modules_input_layernorm_parameters_weight_: "f32[768]", l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_: "f32[768, 768]", l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_: "f32[768]", l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_: "f32[768, 768]", l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_: "f32[768]", l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_: "f32[4096, 768]", l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_: "f32[4096]", l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_: "f32[1024, 768]", l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_: "f32[1024]", l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_: "f32[1024, 768]", l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_: "f32[1024]"):
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:394 in forward, code: hidden_states = hidden_states.to(param_dtype)
+            hidden_states: "f32[32, 51, 768]" = l_args_0_.to(torch.float32);  l_args_0_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:398 in forward, code: ada_cond = ada_cond.to(param_dtype)
+            ada_cond: "f32[32, 768]" = l_kwargs_ada_cond_.to(torch.float32);  l_kwargs_ada_cond_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:231 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_1: "f32[32, 51, 768]" = hidden_states.to(torch.float32);  hidden_states = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:232 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_1: "f32[32, 51, 768]" = hidden_states_1.pow(2)
+            variance: "f32[32, 51, 1]" = pow_1.mean(-1, keepdim = True);  pow_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:233 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add: "f32[32, 51, 1]" = variance + 1e-06;  variance = None
+            rsqrt: "f32[32, 51, 1]" = torch.rsqrt(add);  add = None
+            hidden_states_2: "f32[32, 51, 768]" = hidden_states_1 * rsqrt;  hidden_states_1 = rsqrt = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:235 in forward, code: hidden_states = self.weight * hidden_states
+            hidden_states_3: "f32[32, 51, 768]" = l_forward_self_modules_input_layernorm_parameters_weight_ * hidden_states_2;  l_forward_self_modules_input_layernorm_parameters_weight_ = hidden_states_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:237 in forward, code: gamma = self.gamma(cond).unsqueeze(1)  # [B, 1, H]
+            linear: "f32[32, 768]" = torch._C._nn.linear(ada_cond, l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_, l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_);  l_forward_self_modules_input_layernorm_modules_gamma_parameters_weight_ = l_forward_self_modules_input_layernorm_modules_gamma_parameters_bias_ = None
+            gamma: "f32[32, 1, 768]" = linear.unsqueeze(1);  linear = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:238 in forward, code: beta  = self.beta(cond).unsqueeze(1)   # [B, 1, H]
+            linear_1: "f32[32, 768]" = torch._C._nn.linear(ada_cond, l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_, l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_);  ada_cond = l_forward_self_modules_input_layernorm_modules_beta_parameters_weight_ = l_forward_self_modules_input_layernorm_modules_beta_parameters_bias_ = None
+            beta: "f32[32, 1, 768]" = linear_1.unsqueeze(1);  linear_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:239 in forward, code: hidden_states = (1 + gamma.to(torch.float32)) * hidden_states + beta.to(torch.float32)
+            to_3: "f32[32, 1, 768]" = gamma.to(torch.float32);  gamma = None
+            add_1: "f32[32, 1, 768]" = 1 + to_3;  to_3 = None
+            mul_2: "f32[32, 51, 768]" = add_1 * hidden_states_3;  add_1 = hidden_states_3 = None
+            to_4: "f32[32, 1, 768]" = beta.to(torch.float32);  beta = None
+            hidden_states_4: "f32[32, 51, 768]" = mul_2 + to_4;  mul_2 = to_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:240 in forward, code: return hidden_states.to(input_dtype)
+            hidden_states_5: "f32[32, 51, 768]" = hidden_states_4.to(torch.float32);  hidden_states_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:407 in forward, code: query_state = self.self_attn.q_proj(hidden_states).view(hidden_shape)
+            linear_2: "f32[32, 51, 4096]" = torch._C._nn.linear(hidden_states_5, l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_);  l_forward_self_modules_self_attn_modules_q_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_q_proj_parameters_bias_ = None
+            query_state: "f32[32, 51, 32, 128]" = linear_2.view((32, 51, -1, 128));  linear_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:408 in forward, code: key_state = self.self_attn.k_proj(hidden_states).view(hidden_shape)
+            linear_3: "f32[32, 51, 1024]" = torch._C._nn.linear(hidden_states_5, l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_);  l_forward_self_modules_self_attn_modules_k_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_k_proj_parameters_bias_ = None
+            key_state: "f32[32, 51, 8, 128]" = linear_3.view((32, 51, -1, 128));  linear_3 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:409 in forward, code: value_state = self.self_attn.v_proj(hidden_states).view(hidden_shape)
+            linear_4: "f32[32, 51, 1024]" = torch._C._nn.linear(hidden_states_5, l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_, l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_);  hidden_states_5 = l_forward_self_modules_self_attn_modules_v_proj_parameters_weight_ = l_forward_self_modules_self_attn_modules_v_proj_parameters_bias_ = None
+            value_state: "f32[32, 51, 8, 128]" = linear_4.view((32, 51, -1, 128));  linear_4 = None
+            return (query_state, key_state, value_state)
+            

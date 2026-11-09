@@ -1,0 +1,30 @@
+{
+  "run": "A_r1",
+  "case": "A",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "region_graphs": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "regional": false,
+  "manual": false,
+  "numeric": false,
+  "seconds": 746.2493748664856
+}

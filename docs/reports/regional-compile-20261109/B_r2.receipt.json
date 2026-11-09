@@ -1,0 +1,30 @@
+{
+  "run": "B_r2",
+  "case": "B",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "region_graphs": [
+    144,
+    144,
+    144,
+    144,
+    144,
+    144,
+    144,
+    144
+  ],
+  "regional": true,
+  "manual": false,
+  "numeric": false,
+  "seconds": 696.4795820713043
+}

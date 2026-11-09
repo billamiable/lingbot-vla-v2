@@ -1,0 +1,161 @@
+diff --git a/lingbotvla/models/vla/lingbot_vla/flex_attention.py b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+index 913ee7d..31b7a38 100644
+--- a/lingbotvla/models/vla/lingbot_vla/flex_attention.py
++++ b/lingbotvla/models/vla/lingbot_vla/flex_attention.py
+@@ -218,8 +218,9 @@ def flex_attention_with_block_mask(
+     q_len_rounded = block_mask.shape[-2] if hasattr(block_mask, 'shape') else query_states.shape[2]
+     kv_len_rounded = block_mask.shape[-1] if hasattr(block_mask, 'shape') else key_states.shape[2]
+ 
+-    pad_q = q_len_rounded - query_states.shape[2]
+-    pad_k = kv_len_rounded - key_states.shape[2]
++    # Study-wide policy: match the handwritten prep path, no sequence padding.
++    pad_q = 0
++    pad_k = 0
+ 
+     if pad_q > 0:
+         query_states = F.pad(query_states, (0, 0, 0, pad_q), value=0.0)
+diff --git a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+index 41d826c..f863443 100644
+--- a/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
++++ b/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla_v2.py
+@@ -425,6 +425,7 @@ class QwenvlWithExpertV2Model(PreTrainedModel):
+                             self.qwenvl.config.text_config.num_attention_heads,
+                             _full_len,
+                             _full_len,
++                            pad_to_block=False,
+                         )
+                     att_output = flex_attention_with_block_mask(
+                         query_states, key_states, value_states, _full_block_mask, query_states.shape[1]
+diff --git a/lingbotvla/ops/group_gemm/kernel/moe.py b/lingbotvla/ops/group_gemm/kernel/moe.py
+index 42c3d00..c64ac04 100644
+--- a/lingbotvla/ops/group_gemm/kernel/moe.py
++++ b/lingbotvla/ops/group_gemm/kernel/moe.py
+@@ -308,7 +308,7 @@ def moe_scatter(x: torch.Tensor, index: torch.Tensor, out_dtype=None):
+     topk = index.shape[1]
+     out_dtype = out_dtype or x.dtype
+     out = torch.empty(M * topk, N, dtype=out_dtype, device=x.device)
+-    assert lambda: index.unique().numel() == M * topk, "Holes in output?"
++    # Removed vacuous assert-lambda: its body was never executed in eager.
+ 
+     grid = lambda meta: (M, triton.cdiv(N, meta["BLOCK_N"]))  # noqa
+     with torch.cuda.device(x.device):
+diff --git a/lingbotvla/ops/swiglu.py b/lingbotvla/ops/swiglu.py
+index c23ce02..d67d300 100644
+--- a/lingbotvla/ops/swiglu.py
++++ b/lingbotvla/ops/swiglu.py
+@@ -183,10 +183,37 @@ class _SwiGLU(torch.autograd.Function):
+         return dg, du, None
+ 
+ 
+-@torch.compiler.disable
++# Graph-compatible, opaque boundary for the existing exact Triton kernels.
++# Forward/backward kernels remain unchanged; Inductor does not reserialize nested JIT helpers.
++@torch.library.custom_op("lingbot_regional::swiglu_fwd", mutates_args=())
++def _regional_swiglu_fwd(g: torch.Tensor, u: torch.Tensor, exact: bool) -> torch.Tensor:
++    return (_fwd_triton if _use_triton(g) else _fwd_torch)(g.contiguous(),u.contiguous(),exact)
++
++@_regional_swiglu_fwd.register_fake
++def _regional_swiglu_fake(g,u,exact):
++    return torch.empty_like(g)
++
++@torch.library.custom_op("lingbot_regional::swiglu_bwd", mutates_args=())
++def _regional_swiglu_bwd(do: torch.Tensor, g: torch.Tensor, u: torch.Tensor, exact: bool) -> Tuple[torch.Tensor, torch.Tensor]:
++    return (_bwd_triton if _use_triton(g) else _bwd_torch)(do.contiguous(),g.contiguous(),u.contiguous(),exact)
++
++@_regional_swiglu_bwd.register_fake
++def _regional_swiglu_bwd_fake(do,g,u,exact):
++    return torch.empty_like(g),torch.empty_like(u)
++
++def _regional_setup(ctx,inputs,output):
++    g,u,exact=inputs
++    ctx.save_for_backward(g,u);ctx.exact=exact
++
++def _regional_backward(ctx,do):
++    g,u=ctx.saved_tensors
++    dg,du=_regional_swiglu_bwd(do,g,u,ctx.exact)
++    return dg,du,None
++
++_regional_swiglu_fwd.register_autograd(_regional_backward,setup_context=_regional_setup)
++
+ def swiglu(gate: torch.Tensor, up: torch.Tensor, exact: bool = True) -> torch.Tensor:
+-    """silu(gate) * up in one kernel (forward and backward). exact=True reproduces eager bf16 rounding."""
+-    return _SwiGLU.apply(gate, up, exact)
++    return _regional_swiglu_fwd(gate,up,exact)
+ 
+ 
+ def _fused_mlp_forward(self, x):
+diff --git a/regional_runtime.py b/regional_runtime.py
+new file mode 100644
+index 0000000..040c645
+--- /dev/null
++++ b/regional_runtime.py
+@@ -0,0 +1,56 @@
++"""Region compiler entry outside FSDP/checkpoint control logic, with per-rank compile receipts."""
++import json
++import os
++from pathlib import Path
++import torch
++from torch.utils.checkpoint import checkpoint
++
++
++def install_regional_compile(model, output_dir, enabled=True):
++    # Shared wrapper specializes on layer identity, QKV/output phase, and dtype.
++    torch._dynamo.config.recompile_limit = 256
++    torch._dynamo.config.accumulated_recompile_limit = 4096
++    from lingbotvla.distributed.torch_parallelize import _resolve
++    core=model.model.qwenvl_with_expert
++    vlm,_=_resolve(core.qwenvl,[("model","language_model","layers"),("model","layers")])
++    expert=core.qwen_expert.model.layers
++    path=Path(output_dir).parent/f'region_compile_rank{os.environ.get("RANK","0")}.jsonl'
++    if os.environ.get('STUDY_CODEGEN')=='1' and os.environ.get('RANK')=='0':
++        import torch._inductor.config as inductor_config
++        inductor_config.trace.enabled=True
++        inductor_config.fx_graph_cache=False  # Profile only: force generated IR/code evidence, retain kernel binary caches.
++        inductor_config.trace.debug_dir=str(Path(output_dir).parent/'codegen')
++    # A fullgraph error or cache-limit exception must fail the smoke test, not quietly run eager.
++    def backend(gm, example_inputs):
++        if os.environ.get('STUDY_CODEGEN')=='1' and os.environ.get('RANK')=='0':
++            root=Path(output_dir).parent/'fx';root.mkdir(exist_ok=True)
++            index=len(list(root.glob('*.txt')))
++            (root/f'{index:03d}.txt').write_text(gm.print_readable(print_output=False))
++        with path.open('a') as f:
++            f.write(json.dumps(dict(nodes=len(list(gm.graph.nodes)),targets=[str(n.target) for n in gm.graph.nodes if n.op.startswith('call')]))+'\n')
++        if os.environ.get('STUDY_PRESERVE_CASTS')=='1':
++            return torch._inductor.compile(gm,example_inputs,options={'emulate_precision_casts':True})
++        return torch._dynamo.lookup_backend('inductor')(gm,example_inputs)
++    def wrap(forward,label):
++        def checkpointed(*args,**kwargs):
++            return checkpoint(forward,*args,use_reentrant=False,**kwargs)
++        entry=torch.compile(checkpointed,backend=backend,fullgraph=True,dynamic=False) if enabled else checkpointed
++        @torch.compiler.disable
++        def invoke(*args,**kwargs):
++            from regional_numeric import boundary
++            phase='qkv' if kwargs.get('compute_kqv',False) else 'omlp'
++            boundary(label+'.'+phase+'.input',args)
++            if os.environ.get('STUDY_PROFILE')=='1':
++                with torch.profiler.record_function('decoder.'+label+'.'+phase):
++                    result=entry(*args,**kwargs)
++            else:
++                result=entry(*args,**kwargs)
++            boundary(label+'.'+phase+'.output',result,register_grad=True)
++            return result
++        return invoke
++    for label,layer in [(f"vlm.{i:02d}",x) for i,x in enumerate(vlm)]+[(f"expert.{i:02d}",x) for i,x in enumerate(expert)]:
++        original=layer.forward
++        # All four cells share this boundary: FSDP __call__ hooks outside pure-forward checkpoint.
++        layer.gradient_checkpointing=False
++        layer.forward=wrap(original,label)
++    (Path(output_dir).parent/'region_install.json').write_text(json.dumps(dict(vlm_layers=len(vlm),expert_layers=len(expert),fullgraph=enabled,checkpoint_boundary='pure-forward-hooks-outside',regional=enabled,preserve_casts=os.environ.get('STUDY_PRESERVE_CASTS')=='1'),indent=2))
+diff --git a/tasks/vla/train_lingbotvla.py b/tasks/vla/train_lingbotvla.py
+index f530f90..b0c622e 100644
+--- a/tasks/vla/train_lingbotvla.py
++++ b/tasks/vla/train_lingbotvla.py
+@@ -724,6 +724,8 @@ def main():
+                           f"reduce-scatters in flight {layer_comm.rs_inflight_depth}"
+                           f"{' (post_backward wrapper installed)' if layer_comm.rs_inflight is not None else ''}")
+     logger.info_rank0(model)
++    from regional_runtime import install_regional_compile
++    install_regional_compile(model, args.train.output_dir, enabled=os.environ.get("LINGBOT_REGIONAL_COMPILE", "0") == "1")
+     if args.train.use_compile:
+         model = torch.compile(model)
+ 

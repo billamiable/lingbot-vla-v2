@@ -1,0 +1,466 @@
+class GraphModule(torch.nn.Module):
+    def forward(self, L_args_0_: "f32[32, 51, 768]", L_args_1_: "f32[32, 337, 4096]", L_kwargs_ada_cond_: "f32[32, 768]", L_forward_self_modules_self_attn_modules_o_proj_parameters_weight_: "f32[768, 4096]", L_forward_self_modules_post_attention_layernorm_parameters_weight_: "f32[768]", L_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_: "f32[768, 768]", L_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_: "f32[768]", L_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_: "f32[768, 768]", L_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_: "f32[768]", L_forward_self_modules_mlp_modules_gate_parameters_weight_: "f32[32, 768]", L_forward_self_modules_mlp_buffers_e_score_correction_bias_: "f32[32]", L_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_: "f32[1]", L_forward_self_modules_mlp_buffers_tokens_per_expert_: "f32[32]", L_forward_self_modules_mlp_modules_experts_parameters_gate_proj_: "f32[32, 512, 768]", L_forward_self_modules_mlp_modules_experts_parameters_up_proj_: "f32[32, 512, 768]", L_forward_self_modules_mlp_modules_experts_parameters_down_proj_: "f32[32, 768, 512]", L_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_: "f32[704, 768]", L_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_: "f32[704, 768]", L_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_: "f32[768, 704]"):
+        l_args_0_ = L_args_0_
+        l_args_1_ = L_args_1_
+        l_kwargs_ada_cond_ = L_kwargs_ada_cond_
+        l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = L_forward_self_modules_self_attn_modules_o_proj_parameters_weight_
+        l_forward_self_modules_post_attention_layernorm_parameters_weight_ = L_forward_self_modules_post_attention_layernorm_parameters_weight_
+        l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_ = L_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_
+        l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_ = L_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_
+        l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_ = L_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_
+        l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_ = L_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_
+        l_forward_self_modules_mlp_modules_gate_parameters_weight_ = L_forward_self_modules_mlp_modules_gate_parameters_weight_
+        l_forward_self_modules_mlp_buffers_e_score_correction_bias_ = L_forward_self_modules_mlp_buffers_e_score_correction_bias_
+        l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_ = L_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_
+        l_forward_self_modules_mlp_buffers_tokens_per_expert_ = L_forward_self_modules_mlp_buffers_tokens_per_expert_
+        l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_ = L_forward_self_modules_mlp_modules_experts_parameters_gate_proj_
+        l_forward_self_modules_mlp_modules_experts_parameters_up_proj_ = L_forward_self_modules_mlp_modules_experts_parameters_up_proj_
+        l_forward_self_modules_mlp_modules_experts_parameters_down_proj_ = L_forward_self_modules_mlp_modules_experts_parameters_down_proj_
+        l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_
+        l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_
+        l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_ = L_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_
+        
+         # File: /root/experiments/lingbot-compile-accuracy-20261110/src/regional_runtime.py:36 in checkpointed, code: return checkpoint(forward,*args,use_reentrant=False,**kwargs)
+        wrap_body_0 = self.wrap_body_0
+        tag_activation_checkpoint = torch.ops.higher_order.tag_activation_checkpoint(wrap_body_0, l_args_0_, l_args_1_, l_kwargs_ada_cond_, l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_, l_forward_self_modules_post_attention_layernorm_parameters_weight_, l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_, l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_, l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_, l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_, l_forward_self_modules_mlp_modules_gate_parameters_weight_, l_forward_self_modules_mlp_buffers_e_score_correction_bias_, l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_, l_forward_self_modules_mlp_buffers_tokens_per_expert_, l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_, l_forward_self_modules_mlp_modules_experts_parameters_up_proj_, l_forward_self_modules_mlp_modules_experts_parameters_down_proj_, l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_, l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_, l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_, use_reentrant = False);  wrap_body_0 = l_args_0_ = l_args_1_ = l_kwargs_ada_cond_ = l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_ = l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_ = l_forward_self_modules_mlp_modules_gate_parameters_weight_ = l_forward_self_modules_mlp_buffers_e_score_correction_bias_ = l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_ = l_forward_self_modules_mlp_buffers_tokens_per_expert_ = l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_ = l_forward_self_modules_mlp_modules_experts_parameters_up_proj_ = l_forward_self_modules_mlp_modules_experts_parameters_down_proj_ = l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_ = l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_ = l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_ = None
+        getitem: "f32[32, 51, 768]" = tag_activation_checkpoint[0]
+        getitem_1: "f32[1632, 32]" = tag_activation_checkpoint[1];  tag_activation_checkpoint = None
+        return (getitem, getitem_1)
+        
+    class wrap_body_0(torch.nn.Module):
+        def forward(self, l_args_0_: "f32[32, 51, 768]", l_args_1_: "f32[32, 337, 4096]", l_kwargs_ada_cond_: "f32[32, 768]", l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_: "f32[768, 4096]", l_forward_self_modules_post_attention_layernorm_parameters_weight_: "f32[768]", l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_: "f32[768, 768]", l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_: "f32[768]", l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_: "f32[768, 768]", l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_: "f32[768]", l_forward_self_modules_mlp_modules_gate_parameters_weight_: "f32[32, 768]", l_forward_self_modules_mlp_buffers_e_score_correction_bias_: "f32[32]", l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_: "f32[1]", l_forward_self_modules_mlp_buffers_tokens_per_expert_: "f32[32]", l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_: "f32[32, 512, 768]", l_forward_self_modules_mlp_modules_experts_parameters_up_proj_: "f32[32, 512, 768]", l_forward_self_modules_mlp_modules_experts_parameters_down_proj_: "f32[32, 768, 512]", l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_: "f32[704, 768]", l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_: "f32[704, 768]", l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_: "f32[768, 704]"):
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:394 in forward, code: hidden_states = hidden_states.to(param_dtype)
+            hidden_states: "f32[32, 51, 768]" = l_args_0_.to(torch.float32);  l_args_0_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:396 in forward, code: att_output = att_output.to(param_dtype)
+            att_output: "f32[32, 337, 4096]" = l_args_1_.to(torch.float32);  l_args_1_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:398 in forward, code: ada_cond = ada_cond.to(param_dtype)
+            ada_cond: "f32[32, 768]" = l_kwargs_ada_cond_.to(torch.float32);  l_kwargs_ada_cond_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:416 in forward, code: out_emb = self.self_attn.o_proj(att_output[:, start:end])
+            getitem: "f32[32, 51, 4096]" = att_output[(slice(None, None, None), slice(286, 337, None))];  att_output = None
+            out_emb: "f32[32, 51, 768]" = torch._C._nn.linear(getitem, l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_, None);  getitem = l_forward_self_modules_self_attn_modules_o_proj_parameters_weight_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:419 in forward, code: out_emb += hidden_states
+            out_emb += hidden_states;  out_emb_1: "f32[32, 51, 768]" = out_emb;  out_emb = hidden_states = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:420 in forward, code: after_first_residual = out_emb.clone()
+            after_first_residual: "f32[32, 51, 768]" = out_emb_1.clone()
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:231 in forward, code: hidden_states = hidden_states.to(torch.float32)
+            hidden_states_1: "f32[32, 51, 768]" = out_emb_1.to(torch.float32);  out_emb_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:232 in forward, code: variance = hidden_states.pow(2).mean(-1, keepdim=True)
+            pow_1: "f32[32, 51, 768]" = hidden_states_1.pow(2)
+            variance: "f32[32, 51, 1]" = pow_1.mean(-1, keepdim = True);  pow_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:233 in forward, code: hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            add: "f32[32, 51, 1]" = variance + 1e-06;  variance = None
+            rsqrt: "f32[32, 51, 1]" = torch.rsqrt(add);  add = None
+            hidden_states_2: "f32[32, 51, 768]" = hidden_states_1 * rsqrt;  hidden_states_1 = rsqrt = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:235 in forward, code: hidden_states = self.weight * hidden_states
+            hidden_states_3: "f32[32, 51, 768]" = l_forward_self_modules_post_attention_layernorm_parameters_weight_ * hidden_states_2;  l_forward_self_modules_post_attention_layernorm_parameters_weight_ = hidden_states_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:237 in forward, code: gamma = self.gamma(cond).unsqueeze(1)  # [B, 1, H]
+            linear_1: "f32[32, 768]" = torch._C._nn.linear(ada_cond, l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_, l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_);  l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_modules_gamma_parameters_bias_ = None
+            gamma: "f32[32, 1, 768]" = linear_1.unsqueeze(1);  linear_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:238 in forward, code: beta  = self.beta(cond).unsqueeze(1)   # [B, 1, H]
+            linear_2: "f32[32, 768]" = torch._C._nn.linear(ada_cond, l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_, l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_);  ada_cond = l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_weight_ = l_forward_self_modules_post_attention_layernorm_modules_beta_parameters_bias_ = None
+            beta: "f32[32, 1, 768]" = linear_2.unsqueeze(1);  linear_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:239 in forward, code: hidden_states = (1 + gamma.to(torch.float32)) * hidden_states + beta.to(torch.float32)
+            to_4: "f32[32, 1, 768]" = gamma.to(torch.float32);  gamma = None
+            add_1: "f32[32, 1, 768]" = 1 + to_4;  to_4 = None
+            mul_2: "f32[32, 51, 768]" = add_1 * hidden_states_3;  add_1 = hidden_states_3 = None
+            to_5: "f32[32, 1, 768]" = beta.to(torch.float32);  beta = None
+            hidden_states_4: "f32[32, 51, 768]" = mul_2 + to_5;  mul_2 = to_5 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/modeling_lingbot_vla.py:240 in forward, code: return hidden_states.to(input_dtype)
+            out_emb_2: "f32[32, 51, 768]" = hidden_states_4.to(torch.float32);  hidden_states_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:280 in forward, code: hidden_flat = hidden_states.reshape(-1, hidden_dim)  # (B*T, D)
+            hidden_flat: "f32[1632, 768]" = out_emb_2.reshape(-1, 768);  out_emb_2 = None
+            
+            # No stacktrace found for following nodes
+            _enter_autocast = torch.amp.autocast_mode._enter_autocast('cuda', None, False, None)
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:285 in forward, code: router_logits = F.linear(hidden_flat.float(), self.gate.weight.float())  # (B*T, num_experts)
+            float_1: "f32[1632, 768]" = hidden_flat.float()
+            float_2: "f32[32, 768]" = l_forward_self_modules_mlp_modules_gate_parameters_weight_.float();  l_forward_self_modules_mlp_modules_gate_parameters_weight_ = None
+            router_logits: "f32[1632, 32]" = torch._C._nn.linear(float_1, float_2);  float_1 = float_2 = None
+            
+            # No stacktrace found for following nodes
+            _exit_autocast = torch.amp.autocast_mode._exit_autocast(_enter_autocast);  _enter_autocast = _exit_autocast = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:288 in forward, code: routing_scores = router_logits.sigmoid()
+            routing_scores: "f32[1632, 32]" = router_logits.sigmoid()
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:292 in forward, code: scores_for_choice = routing_scores + self.e_score_correction_bias.unsqueeze(0)
+            unsqueeze_2: "f32[1, 32]" = l_forward_self_modules_mlp_buffers_e_score_correction_bias_.unsqueeze(0);  l_forward_self_modules_mlp_buffers_e_score_correction_bias_ = None
+            scores_for_choice: "f32[1632, 32]" = routing_scores + unsqueeze_2;  unsqueeze_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:293 in forward, code: _, selected_experts = torch.topk(scores_for_choice, self.top_k, dim=-1)
+            topk = torch.topk(scores_for_choice, 4, dim = -1);  scores_for_choice = None
+            _: "f32[1632, 4]" = topk[0];  _ = None
+            selected_experts: "i64[1632, 4]" = topk[1];  topk = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:294 in forward, code: routing_weights = routing_scores.gather(1, selected_experts)
+            routing_weights: "f32[1632, 4]" = routing_scores.gather(1, selected_experts);  routing_scores = None
+            
+            # No stacktrace found for following nodes
+            _set_grad_enabled = torch._C._set_grad_enabled(False);  _set_grad_enabled = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:41 in _update_moe_runtime_stats, code: avg_score = routing_weights.detach().float().mean()
+            detach: "f32[1632, 4]" = routing_weights.detach()
+            float_3: "f32[1632, 4]" = detach.float();  detach = None
+            avg_score: "f32[]" = float_3.mean();  float_3 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:43 in _update_moe_runtime_stats, code: avg_score.reshape_as(block.avg_topk_sigmoid_score).to(
+            reshape_as: "f32[1]" = avg_score.reshape_as(l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_);  avg_score = None
+            to_7: "f32[1]" = reshape_as.to(device = device(type='cuda', index=0), dtype = torch.float32);  reshape_as = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:42 in _update_moe_runtime_stats, code: block.avg_topk_sigmoid_score.copy_(
+            copy_: "f32[1]" = l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_.copy_(to_7);  l_forward_self_modules_mlp_buffers_avg_topk_sigmoid_score_ = to_7 = copy_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:51 in _update_moe_runtime_stats, code: selected_experts.detach().reshape(-1),
+            detach_1: "i64[1632, 4]" = selected_experts.detach()
+            reshape_1: "i64[6528]" = detach_1.reshape(-1);  detach_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:50 in _update_moe_runtime_stats, code: counts = F.one_hot(
+            one_hot: "i64[6528, 32]" = torch._C._nn.one_hot(reshape_1, num_classes = 32);  reshape_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:53 in _update_moe_runtime_stats, code: ).sum(dim=0)
+            counts: "i64[32]" = one_hot.sum(dim = 0);  one_hot = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:55 in _update_moe_runtime_stats, code: counts.to(
+            to_8: "f32[32]" = counts.to(device = device(type='cuda', index=0), dtype = torch.float32);  counts = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:54 in _update_moe_runtime_stats, code: block.tokens_per_expert.add_(
+            add_: "f32[32]" = l_forward_self_modules_mlp_buffers_tokens_per_expert_.add_(to_8);  l_forward_self_modules_mlp_buffers_tokens_per_expert_ = to_8 = add_ = None
+            
+            # No stacktrace found for following nodes
+            _set_grad_enabled_1 = torch._C._set_grad_enabled(True);  _set_grad_enabled_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:298 in forward, code: routing_weights = routing_weights / (routing_weights.sum(dim=-1, keepdim=True) + 1e-20)
+            sum_2: "f32[1632, 1]" = routing_weights.sum(dim = -1, keepdim = True)
+            add_4: "f32[1632, 1]" = sum_2 + 1e-20;  sum_2 = None
+            routing_weights_1: "f32[1632, 4]" = routing_weights / add_4;  routing_weights = add_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:300 in forward, code: routing_weights = routing_weights * self.routed_scaling_factor
+            routing_weights_2: "f32[1632, 4]" = routing_weights_1 * 4.0;  routing_weights_1 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:301 in forward, code: routing_weights = routing_weights.to(hidden_states.dtype)
+            routing_weights_3: "f32[1632, 4]" = routing_weights_2.to(torch.float32);  routing_weights_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:289 in fused_moe_forward, code: hidden_states = hidden_states.to(compute_dtype)
+            hidden_states_5: "bf16[1632, 768]" = hidden_flat.to(torch.bfloat16)
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:290 in fused_moe_forward, code: routing_weights = routing_weights.to(compute_dtype)
+            routing_weights_4: "bf16[1632, 4]" = routing_weights_3.to(torch.bfloat16);  routing_weights_3 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:291 in fused_moe_forward, code: fc1_1_weight = fc1_1_weight.to(compute_dtype)
+            fc1_1_weight: "bf16[32, 512, 768]" = l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_.to(torch.bfloat16);  l_forward_self_modules_mlp_modules_experts_parameters_gate_proj_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:292 in fused_moe_forward, code: fc1_2_weight = fc1_2_weight.to(compute_dtype)
+            fc1_2_weight: "bf16[32, 512, 768]" = l_forward_self_modules_mlp_modules_experts_parameters_up_proj_.to(torch.bfloat16);  l_forward_self_modules_mlp_modules_experts_parameters_up_proj_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:293 in fused_moe_forward, code: fc2_weight = fc2_weight.to(compute_dtype)
+            fc2_weight: "bf16[32, 768, 512]" = l_forward_self_modules_mlp_modules_experts_parameters_down_proj_.to(torch.bfloat16);  l_forward_self_modules_mlp_modules_experts_parameters_down_proj_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:363 in fused_moe_forward, code: final_hidden_states = FusedMoeExpertFunction.apply(
+            fwd_body_0 = self.fwd_body_0
+            bwd_body_0 = self.bwd_body_0
+            final_hidden_states: "bf16[1632, 768]" = torch.ops.higher_order.autograd_function_apply(fwd_body_0, bwd_body_0, routing_weights_4, selected_experts, hidden_states_5, fc1_1_weight, fc1_2_weight, fc2_weight, args_tensor_mask = [False, True, True, True, True, True, True], non_differentiable_idx = []);  fwd_body_0 = bwd_body_0 = routing_weights_4 = selected_experts = hidden_states_5 = fc1_1_weight = fc1_2_weight = fc2_weight = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:355 in forward, code: final_hidden_states = final_hidden_states.to(hidden_flat.dtype)
+            final_hidden_states_1: "f32[1632, 768]" = final_hidden_states.to(torch.float32);  final_hidden_states = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:110 in forward, code: return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            linear_4: "f32[1632, 704]" = torch._C._nn.linear(hidden_flat, l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_, None);  l_forward_self_modules_mlp_modules_shared_expert_modules_gate_proj_parameters_weight_ = None
+            
+             # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/transformers/activations.py:99 in forward, code: return nn.functional.silu(input)
+            silu: "f32[1632, 704]" = torch.nn.functional.silu(linear_4);  linear_4 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:110 in forward, code: return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            linear_5: "f32[1632, 704]" = torch._C._nn.linear(hidden_flat, l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_, None);  hidden_flat = l_forward_self_modules_mlp_modules_shared_expert_modules_up_proj_parameters_weight_ = None
+            mul_4: "f32[1632, 704]" = silu * linear_5;  silu = linear_5 = None
+            shared_expert_output: "f32[1632, 768]" = torch._C._nn.linear(mul_4, l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_, None);  mul_4 = l_forward_self_modules_mlp_modules_shared_expert_modules_down_proj_parameters_weight_ = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:359 in forward, code: final_hidden_states = final_hidden_states + shared_expert_output
+            final_hidden_states_2: "f32[1632, 768]" = final_hidden_states_1 + shared_expert_output;  final_hidden_states_1 = shared_expert_output = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:361 in forward, code: final_hidden_states = final_hidden_states.reshape(batch_size, sequence_length, hidden_dim)
+            final_hidden_states_3: "f32[32, 51, 768]" = final_hidden_states_2.reshape(32, 51, 768);  final_hidden_states_2 = None
+            
+             # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/models/vla/lingbot_vla/qwen2_action_expert.py:431 in forward, code: out_emb += after_first_residual
+            final_hidden_states_3 += after_first_residual;  out_emb_3: "f32[32, 51, 768]" = final_hidden_states_3;  final_hidden_states_3 = after_first_residual = None
+            return (out_emb_3, router_logits)
+            
+        class fwd_body_0(torch.nn.Module):
+            def forward(self, ctx : torch.autograd.function.Function, gate_weights: "bf16[1632, 4]", expert_index: "i64[1632, 4]", hidden_states: "bf16[1632, 768]", fc1_1_weight: "bf16[32, 512, 768]", fc1_2_weight: "bf16[32, 512, 768]", fc2_weight: "bf16[32, 768, 512]"):
+                # No stacktrace found for following nodes
+                _set_grad_enabled = torch._C._set_grad_enabled(False);  _set_grad_enabled = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:61 in expert_histogram, code: flattened = input.flatten().contiguous()
+                flatten: "i64[6528]" = expert_index.flatten()
+                flattened: "i64[6528]" = flatten.contiguous();  flatten = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:66 in expert_histogram, code: out = torch.zeros([num_bins], dtype=torch.int32, device=input.device)
+                out: "i32[32]" = torch.zeros([32], dtype = torch.int32, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 0, constant_args_idx = 28, grid = [(7, 1, 1)], tma_descriptor_metadata = {}, kwargs = {'out_ptr': out, 'x_ptr': flattened});  flattened = triton_kernel_wrapper_mutation = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device);  _cuda_exchange_device = _cuda_maybe_exchange_device = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:81 in expert_histogram, code: return out[:num_bins]
+                splits: "i32[32]" = out[slice(None, 32, None)];  out = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:49 in forward, code: scatter_index = expert_index.flatten().argsort(stable=True).argsort().int().view(expert_index.shape)
+                flatten_1: "i64[6528]" = expert_index.flatten();  expert_index = None
+                argsort: "i64[6528]" = flatten_1.argsort(stable = True);  flatten_1 = None
+                argsort_1: "i64[6528]" = argsort.argsort();  argsort = None
+                int_1: "i32[6528]" = argsort_1.int();  argsort_1 = None
+                scatter_index: "i32[1632, 4]" = int_1.view((1632, 4));  int_1 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:310 in moe_scatter, code: out = torch.empty(M * topk, N, dtype=out_dtype, device=x.device)
+                out_1: "bf16[6528, 768]" = torch.empty(6528, 768, dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_1 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_1 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 1, constant_args_idx = 29, grid = [(1632, 1, 1)], tma_descriptor_metadata = {}, kwargs = {'X': hidden_states, 'O': out_1, 'index': scatter_index});  hidden_states = triton_kernel_wrapper_mutation_1 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_1 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_1);  _cuda_exchange_device_1 = _cuda_maybe_exchange_device_1 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:57 in forward, code: cumsum_t = torch.cumsum(splits, dim=0)
+                cumsum_t: "i64[32]" = torch.cumsum(splits, dim = 0);  splits = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c: "bf16[6528, 512]" = torch.empty((6528, 512), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_2 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_2 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 30, grid = [(204, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': out_1, 'b_ptr': fc1_1_weight, 'c_ptr': c, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_2 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_2 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_2);  _cuda_exchange_device_2 = _cuda_maybe_exchange_device_2 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c_1: "bf16[6528, 512]" = torch.empty((6528, 512), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_3 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_3 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 31, grid = [(204, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': out_1, 'b_ptr': fc1_2_weight, 'c_ptr': c_1, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_3 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_3 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_3);  _cuda_exchange_device_3 = _cuda_maybe_exchange_device_3 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:81 in forward, code: fc1_1_activation = torch.ops.aten.silu(fc1_1_output)
+                fc1_1_activation: "bf16[6528, 512]" = torch.ops.aten.silu(c)
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:84 in forward, code: fc1_activation = fc1_1_activation * fc1_2_output
+                fc1_activation: "bf16[6528, 512]" = fc1_1_activation * c_1;  fc1_1_activation = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:88 in forward, code: reshaped_gate_weight = gate_weights.reshape(-1, 1)
+                reshaped_gate_weight: "bf16[6528, 1]" = gate_weights.reshape(-1, 1);  gate_weights = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:89 in forward, code: scattered_gate_weight = torch.empty_like(reshaped_gate_weight)
+                scattered_gate_weight: "bf16[6528, 1]" = torch.empty_like(reshaped_gate_weight)
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:90 in forward, code: scattered_gate_weight[scatter_index.flatten()] = reshaped_gate_weight
+                flatten_2: "i32[6528]" = scatter_index.flatten()
+                scattered_gate_weight[flatten_2] = reshaped_gate_weight;  setitem = scattered_gate_weight;  flatten_2 = reshaped_gate_weight = setitem = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:94 in forward, code: fc1_weighted_output = fc1_activation * scattered_gate_weight
+                fc1_weighted_output: "bf16[6528, 512]" = fc1_activation * scattered_gate_weight
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c_2: "bf16[6528, 768]" = torch.empty((6528, 768), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_4 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_4 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 32, grid = [(306, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': fc1_weighted_output, 'b_ptr': fc2_weight, 'c_ptr': c_2, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_4 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_4 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_4);  _cuda_exchange_device_4 = _cuda_maybe_exchange_device_4 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:137 in moe_gather, code: out = torch.empty(M, N, dtype=out_dtype, device=x.device)
+                out_2: "bf16[1632, 768]" = torch.empty(1632, 768, dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_5 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_5 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 3, constant_args_idx = 33, grid = [(1632, 1, 1)], tma_descriptor_metadata = {}, kwargs = {'X': c_2, 'Y': out_2, 'index': scatter_index});  c_2 = triton_kernel_wrapper_mutation_5 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_5 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_5);  _cuda_exchange_device_5 = _cuda_maybe_exchange_device_5 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:111 in forward, code: output = expert_output.reshape(hidden_states.shape)
+                output: "bf16[1632, 768]" = out_2.reshape((1632, 768));  out_2 = None
+                
+                # No stacktrace found for following nodes
+                _set_grad_enabled_1 = torch._C._set_grad_enabled(True);  _set_grad_enabled_1 = None
+                return (output, [scatter_index, fc2_weight, cumsum_t, fc1_weighted_output, scattered_gate_weight, fc1_activation, c, c_1, fc1_2_weight, out_1, fc1_1_weight])
+                
+        class bwd_body_0(torch.nn.Module):
+            def forward(self, function_ctx : torch.autograd.function.Function, output: "bf16[1632, 768]", scatter_index: "i32[1632, 4]", fc2_weight: "bf16[32, 768, 512]", cumsum_t: "i64[32]", fc1_weighted_output: "bf16[6528, 512]", scattered_gate_weight: "bf16[6528, 1]", fc1_activation: "bf16[6528, 512]", c: "bf16[6528, 512]", c_1_0: "bf16[6528, 512]", fc1_2_weight: "bf16[32, 512, 768]", out_1: "bf16[6528, 768]", fc1_1_weight: "bf16[32, 512, 768]"):
+                c_1 = c
+                
+                # No stacktrace found for following nodes
+                _set_grad_enabled = torch._C._set_grad_enabled(False);  _set_grad_enabled = None
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_dynamo/_trace_wrapped_higher_order_op.py:241 in new_backward, code: grads = [g.contiguous() for g in grads]
+                contiguous: "bf16[1632, 768]" = output.contiguous();  output = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:150 in backward, code: grad_output = grad_output.view(-1, hidden_dim)
+                grad_output: "bf16[1632, 768]" = contiguous.view(-1, 768);  contiguous = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:310 in moe_scatter, code: out = torch.empty(M * topk, N, dtype=out_dtype, device=x.device)
+                out: "bf16[6528, 768]" = torch.empty(6528, 768, dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 1, constant_args_idx = 34, grid = [(1632, 1, 1)], tma_descriptor_metadata = {}, kwargs = {'X': grad_output, 'O': out, 'index': scatter_index});  grad_output = triton_kernel_wrapper_mutation = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device);  _cuda_exchange_device = _cuda_maybe_exchange_device = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c: "bf16[6528, 512]" = torch.empty((6528, 512), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_1 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_1 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 35, grid = [(52, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': out, 'b_ptr': fc2_weight, 'c_ptr': c, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_1 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_1 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_1);  _cuda_exchange_device_1 = _cuda_maybe_exchange_device_1 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:170 in backward, code: grad_fc2_weight = torch.empty_like(fc2_weight)
+                grad_fc2_weight: "bf16[32, 768, 512]" = torch.empty_like(fc2_weight);  fc2_weight = None
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_2 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_2 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 4, constant_args_idx = 36, grid = [(24, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': out, 'b_ptr': fc1_weighted_output, 'c_ptr': grad_fc2_weight, 'cumsum_K': cumsum_t});  out = fc1_weighted_output = triton_kernel_wrapper_mutation_2 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_2 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_2);  _cuda_exchange_device_2 = _cuda_maybe_exchange_device_2 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:183 in backward, code: grad_fc1_activation = grad_fc1_weighted_output * scattered_gate_weight
+                grad_fc1_activation: "bf16[6528, 512]" = c * scattered_gate_weight;  scattered_gate_weight = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:186 in backward, code: grad_scattered_gate_weight = torch.sum(fc1_activation * grad_fc1_weighted_output, dim=-1)
+                mul_1: "bf16[6528, 512]" = fc1_activation * c;  fc1_activation = c = None
+                grad_scattered_gate_weight: "bf16[6528]" = torch.sum(mul_1, dim = -1);  mul_1 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:187 in backward, code: grad_gate_weight = grad_scattered_gate_weight[scatter_index.flatten()]
+                flatten: "i32[6528]" = scatter_index.flatten()
+                grad_gate_weight: "bf16[6528]" = grad_scattered_gate_weight[flatten];  grad_scattered_gate_weight = flatten = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:188 in backward, code: grad_gate_weight = grad_gate_weight.reshape(gate_weights.shape)
+                grad_gate_weight_1: "bf16[1632, 4]" = grad_gate_weight.reshape((1632, 4));  grad_gate_weight = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:191 in backward, code: fc1_1_activation = torch.ops.aten.silu(fc1_1_output)
+                fc1_1_activation: "bf16[6528, 512]" = torch.ops.aten.silu(c_1)
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:194 in backward, code: grad_fc1_1_activation = grad_fc1_activation * fc1_2_output
+                grad_fc1_1_activation: "bf16[6528, 512]" = grad_fc1_activation * c_1_0;  c_1_0 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:195 in backward, code: grad_fc1_2_output = fc1_1_activation * grad_fc1_activation
+                grad_fc1_2_output: "bf16[6528, 512]" = fc1_1_activation * grad_fc1_activation;  fc1_1_activation = grad_fc1_activation = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c_2: "bf16[6528, 768]" = torch.empty((6528, 768), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_3 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_3 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 37, grid = [(78, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': grad_fc1_2_output, 'b_ptr': fc1_2_weight, 'c_ptr': c_2, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_3 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_3 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_3);  _cuda_exchange_device_3 = _cuda_maybe_exchange_device_3 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:212 in backward, code: grad_fc1_2_weight = torch.empty_like(fc1_2_weight)
+                grad_fc1_2_weight: "bf16[32, 512, 768]" = torch.empty_like(fc1_2_weight);  fc1_2_weight = None
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_4 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_4 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 4, constant_args_idx = 38, grid = [(24, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': grad_fc1_2_output, 'b_ptr': out_1, 'c_ptr': grad_fc1_2_weight, 'cumsum_K': cumsum_t});  grad_fc1_2_output = triton_kernel_wrapper_mutation_4 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_4 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_4);  _cuda_exchange_device_4 = _cuda_maybe_exchange_device_4 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:224 in backward, code: grad_fc1_1_output = torch.ops.aten.silu_backward(grad_fc1_1_activation, fc1_1_output)
+                grad_fc1_1_output: "bf16[6528, 512]" = torch.ops.aten.silu_backward(grad_fc1_1_activation, c_1);  grad_fc1_1_activation = c_1 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/group_gemm.py:201 in group_gemm_same_nk, code: c = torch.empty((a.shape[1] if transpose_a else a.shape[0], N), dtype=a.dtype, device=a.device)
+                c_3: "bf16[6528, 768]" = torch.empty((6528, 768), dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_5 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_5 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 2, constant_args_idx = 39, grid = [(78, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': grad_fc1_1_output, 'b_ptr': fc1_1_weight, 'c_ptr': c_3, 'cumsum_M': cumsum_t});  triton_kernel_wrapper_mutation_5 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_5 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_5);  _cuda_exchange_device_5 = _cuda_maybe_exchange_device_5 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:241 in backward, code: grad_fc1_1_weight = torch.empty_like(fc1_1_weight)
+                grad_fc1_1_weight: "bf16[32, 512, 768]" = torch.empty_like(fc1_1_weight);  fc1_1_weight = None
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_6 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_6 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 4, constant_args_idx = 40, grid = [(24, 32, 1)], tma_descriptor_metadata = {}, kwargs = {'a_ptr': grad_fc1_1_output, 'b_ptr': out_1, 'c_ptr': grad_fc1_1_weight, 'cumsum_K': cumsum_t});  grad_fc1_1_output = out_1 = cumsum_t = triton_kernel_wrapper_mutation_6 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_6 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_6);  _cuda_exchange_device_6 = _cuda_maybe_exchange_device_6 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:254 in backward, code: grad_scatter_output = grad_scatter_output_1 + grad_scatter_output_2
+                grad_scatter_output: "bf16[6528, 768]" = c_3 + c_2;  c_3 = c_2 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/group_gemm/kernel/moe.py:137 in moe_gather, code: out = torch.empty(M, N, dtype=out_dtype, device=x.device)
+                out_2: "bf16[1632, 768]" = torch.empty(1632, 768, dtype = torch.bfloat16, device = device(type='cuda', index=0))
+                
+                # No stacktrace found for following nodes
+                _cuda_exchange_device_7 = torch._C._cuda_exchangeDevice(0)
+                
+                 # File: /root/qihank/envs/lingbotvla/lib/python3.12/site-packages/triton/runtime/autotuner.py:453 in run, code: return self.fn.run(*args, **kwargs)
+                triton_kernel_wrapper_mutation_7 = torch.ops.higher_order.triton_kernel_wrapper_mutation(kernel_idx = 3, constant_args_idx = 41, grid = [(1632, 1, 1)], tma_descriptor_metadata = {}, kwargs = {'X': grad_scatter_output, 'Y': out_2, 'index': scatter_index});  grad_scatter_output = scatter_index = triton_kernel_wrapper_mutation_7 = None
+                
+                # No stacktrace found for following nodes
+                _cuda_maybe_exchange_device_7 = torch._C._cuda_maybeExchangeDevice(_cuda_exchange_device_7);  _cuda_exchange_device_7 = _cuda_maybe_exchange_device_7 = None
+                
+                 # File: /root/experiments/lingbot-compile-accuracy-20261110/src/lingbotvla/ops/fused_moe.py:261 in backward, code: grad_hidden_states = grad_hidden_states.reshape(hidden_states.shape)
+                grad_hidden_states: "bf16[1632, 768]" = out_2.reshape((1632, 768));  out_2 = None
+                
+                # No stacktrace found for following nodes
+                _set_grad_enabled_1 = torch._C._set_grad_enabled(True);  _set_grad_enabled_1 = None
+                return (grad_gate_weight_1, None, grad_hidden_states, grad_fc1_1_weight, grad_fc1_2_weight, grad_fc2_weight)
+                

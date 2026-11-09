@@ -1,0 +1,111 @@
+op0: SchedulerNode(ComputedBuffer)
+op0.writes = [MemoryDep('buf0', c0, {c0: 1152})]
+op0.unmet_dependencies = []
+op0.met_dependencies = []
+op0.outputs = [
+    buf0: ComputedBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.int64, size=[1152], stride=[1])
+    buf0.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op0.group.device = cuda:0
+op0.group.iteration = (1152, 1)
+op0.sizes = ([1152], [])
+buf0_layout = FixedLayout('cuda:0', torch.int64, size=[1152], stride=[1])
+class op0_loop_body:
+    var_ranges = {p0: 1152}
+    index0 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        index_expr = ops.index_expr(get_index, torch.int64)
+        get_index_1 = self.get_index('index0')
+        store = ops.store('buf0', get_index_1, index_expr, None)
+        return store
+
+
+op1: SchedulerNode(ComputedBuffer)
+op1.writes = [MemoryDep('buf1', c0, {c0: 1152})]
+op1.unmet_dependencies = []
+op1.met_dependencies = [MemoryDep('_tensor_constant0', ModularIndexing(c0, 1, 32), {c0: 1152})]
+op1.outputs = [
+    buf1: ComputedBuffer
+    buf1.layout = FixedLayout('cuda:0', torch.int64, size=[1152], stride=[1])
+    buf1.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op1.group.device = cuda:0
+op1.group.iteration = (1152, 1)
+op1.sizes = ([1152], [])
+_tensor_constant0_layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+buf1_layout = FixedLayout('cuda:0', torch.int64, size=[1152], stride=[1])
+class op1_loop_body:
+    var_ranges = {p0: 1152}
+    index0 = ModularIndexing(p0, 1, 32)
+    index1 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('_tensor_constant0', get_index)
+        get_index_1 = self.get_index('index1')
+        store = ops.store('buf1', get_index_1, load, None)
+        return store
+
+
+op2: SchedulerNode(ComputedBuffer)
+op2.writes = [MemoryDep('buf2', c0, {c0: 32})]
+op2.unmet_dependencies = []
+op2.met_dependencies = [MemoryDep('_tensor_constant0', c0, {c0: 32})]
+op2.outputs = [
+    buf2: ComputedBuffer
+    buf2.layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+    buf2.users = [NodeUser(node=SchedulerNode(name='op3'), can_inplace=False, is_weak=False)]
+]
+op2.group.device = cuda:0
+op2.group.iteration = (1, 32)
+op2.sizes = ([], [32])
+_tensor_constant0_layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+buf2_layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+class op2_loop_body:
+    var_ranges = {p0: 32}
+    index0 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('_tensor_constant0', get_index)
+        scan1 = self.scan1((torch.int64,), (load,))
+        getitem = scan1[0]
+        get_index_1 = self.get_index('index0')
+        store = ops.store('buf2', get_index_1, getitem, None)
+        return store
+
+
+op3: SchedulerNode(ComputedBuffer)
+op3.writes = [MemoryDep('buf3', c0, {c0: 1152})]
+op3.unmet_dependencies = [MemoryDep('buf2', c1, {c0: 36, c1: 32})]
+op3.met_dependencies = [MemoryDep('_tensor_constant0', c1, {c0: 36, c1: 32})]
+op3.outputs = [
+    buf3: ComputedBuffer
+    buf3.layout = FixedLayout('cuda:0', torch.int64, size=[36, 32], stride=[32, 1])
+    buf3.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op3.group.device = cuda:0
+op3.group.iteration = (1152, 1)
+op3.sizes = ([36, 32], [])
+buf2_layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+_tensor_constant0_layout = FixedLayout('cuda:0', torch.int64, size=[32], stride=[1])
+buf3_layout = FixedLayout('cuda:0', torch.int64, size=[36, 32], stride=[32, 1])
+class op3_loop_body:
+    var_ranges = {p0: 36, p1: 32}
+    index0 = p1
+    index1 = 1632*p0
+    index2 = 32*p0 + p1
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('buf2', get_index)
+        get_index_1 = self.get_index('index0')
+        load_1 = ops.load('_tensor_constant0', get_index_1)
+        sub = ops.sub(load, load_1)
+        get_index_2 = self.get_index('index1')
+        index_expr = ops.index_expr(get_index_2, torch.int64)
+        add = ops.add(sub, index_expr)
+        get_index_3 = self.get_index('index2')
+        store = ops.store('buf3', get_index_3, add, None)
+        return store
+
+

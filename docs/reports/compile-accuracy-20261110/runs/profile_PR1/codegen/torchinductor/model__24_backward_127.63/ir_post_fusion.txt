@@ -1,0 +1,186 @@
+op0: SchedulerNode(ComputedBuffer)
+op0.writes = [MemoryDep('buf0', c0, {c0: 112640})]
+op0.unmet_dependencies = []
+op0.met_dependencies = 
+    [   MemoryDep('primals_1', 532480*c0 + c1 + 2560*c2, {c0: 44, c1: 2560, c2: 208}),
+        MemoryDep('rsqrt', 208*c0 + c2, {c0: 44, c1: 2560, c2: 208}),
+        MemoryDep('tangents_1', 532480*c0 + c1 + 2560*c2, {c0: 44, c1: 2560, c2: 208})]
+op0.outputs = [
+    buf0: ComputedBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.float32, size=[1, 1, 2560, 44], stride=[112640, 112640, 1, 2560])
+    buf0.users = [NodeUser(node=SchedulerNode(name='op1'), can_inplace=False, is_weak=False)]
+]
+op0.group.device = cuda:0
+op0.group.iteration = (112640, 208)
+op0.sizes = ([44, 2560], [208])
+tangents_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+primals_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+rsqrt_layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 1])
+buf0_layout = FixedLayout('cuda:0', torch.float32, size=[1, 1, 2560, 44], stride=[112640, 112640, 1, 2560])
+class op0_loop_body:
+    var_ranges = {p0: 44, p1: 2560, p2: 208}
+    index0 = 532480*p0 + p1 + 2560*p2
+    index1 = 208*p0 + p2
+    index2 = 2560*p0 + p1
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('tangents_1', get_index)
+        get_index_1 = self.get_index('index0')
+        load_1 = ops.load('primals_1', get_index_1)
+        to_dtype = ops.to_dtype(load_1, torch.float32, src_dtype = torch.bfloat16)
+        get_index_2 = self.get_index('index1')
+        load_2 = ops.load('rsqrt', get_index_2)
+        mul = ops.mul(to_dtype, load_2)
+        to_dtype_1 = ops.to_dtype(mul, torch.bfloat16, src_dtype = torch.float32)
+        mul_1 = ops.mul(load, to_dtype_1)
+        reduction = ops.reduction(torch.float32, torch.bfloat16, 'sum', mul_1)
+        get_index_3 = self.get_index('index2')
+        store_reduction = ops.store_reduction('buf0', get_index_3, reduction)
+        return store_reduction
+
+
+op1: SchedulerNode(ComputedBuffer)
+op1.writes = [MemoryDep('buf1', c0, {c0: 2560})]
+op1.unmet_dependencies = [MemoryDep('buf0', c0 + 2560*c1, {c0: 2560, c1: 44})]
+op1.met_dependencies = []
+op1.outputs = [
+    buf1: ComputedBuffer
+    buf1.layout = FixedLayout('cuda:0', torch.bfloat16, size=[1, 1, 2560], stride=[2560, 2560, 1])
+    buf1.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op1.group.device = cuda:0
+op1.group.iteration = (2560, 44)
+op1.sizes = ([2560], [44])
+buf0_layout = FixedLayout('cuda:0', torch.float32, size=[1, 1, 2560, 44], stride=[112640, 112640, 1, 2560])
+buf1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[1, 1, 2560], stride=[2560, 2560, 1])
+class op1_loop_body:
+    var_ranges = {p0: 2560, p1: 44}
+    index0 = p0 + 2560*p1
+    index1 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('buf0', get_index)
+        reduction = ops.reduction(torch.bfloat16, torch.bfloat16, 'sum', load)
+        get_index_1 = self.get_index('index1')
+        store_reduction = ops.store_reduction('buf1', get_index_1, reduction)
+        return store_reduction
+
+
+op2_op3: FusedSchedulerNode(SchedulerNode,SchedulerNode)
+op2_op3.writes = [MemoryDep('buf2', c0, {c0: 9152}), MemoryDep('buf3', c0, {c0: 23429120})]
+op2_op3.unmet_dependencies = []
+op2_op3.met_dependencies = 
+    [   MemoryDep('primals_1', c0, {c0: 23429120}),
+        MemoryDep('primals_2', c1, {c0: 9152, c1: 2560}),
+        MemoryDep('rsqrt', c0, {c0: 9152}),
+        MemoryDep('tangents_1', c0, {c0: 23429120})]
+op2_op3.outputs = [
+    buf2: ComputedBuffer
+    buf2.layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 9152])
+    buf2.users = [NodeUser(node=SchedulerNode(name='op3'), can_inplace=False, is_weak=False)]
+    buf3: ComputedBuffer
+    buf3.layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+    buf3.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op2_op3.snodes[0] =
+op2: SchedulerNode(ComputedBuffer)
+op2.writes = [MemoryDep('buf2', c0, {c0: 9152})]
+op2.unmet_dependencies = []
+op2.met_dependencies = 
+    [   MemoryDep('primals_1', c0, {c0: 23429120}),
+        MemoryDep('primals_2', c1, {c0: 9152, c1: 2560}),
+        MemoryDep('tangents_1', c0, {c0: 23429120})]
+op2.outputs = [
+    buf2: ComputedBuffer
+    buf2.layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 9152])
+    buf2.users = [NodeUser(node=SchedulerNode(name='op3'), can_inplace=False, is_weak=False)]
+]
+op2.group.device = cuda:0
+op2.group.iteration = (9152, 2560)
+op2.sizes = ([9152], [2560])
+tangents_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+primals_2_layout = FixedLayout('cuda:0', torch.bfloat16, size=[2560], stride=[1])
+primals_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+buf2_layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 9152])
+class op2_loop_body:
+    var_ranges = {p0: 9152, p1: 2560}
+    index0 = 2560*p0 + p1
+    index1 = p1
+    index2 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('tangents_1', get_index)
+        get_index_1 = self.get_index('index1')
+        load_1 = ops.load('primals_2', get_index_1)
+        mul = ops.mul(load, load_1)
+        to_dtype = ops.to_dtype(mul, torch.float32, src_dtype = torch.bfloat16)
+        get_index_2 = self.get_index('index0')
+        load_2 = ops.load('primals_1', get_index_2)
+        to_dtype_1 = ops.to_dtype(load_2, torch.float32, src_dtype = torch.bfloat16)
+        mul_1 = ops.mul(to_dtype, to_dtype_1)
+        reduction = ops.reduction(torch.float32, torch.float32, 'sum', mul_1)
+        get_index_3 = self.get_index('index2')
+        store_reduction = ops.store_reduction('buf2', get_index_3, reduction)
+        return store_reduction
+op2_op3.snodes[1] =
+op3: SchedulerNode(ComputedBuffer)
+op3.writes = [MemoryDep('buf3', c0, {c0: 23429120})]
+op3.unmet_dependencies = [MemoryDep('buf2', c0, {c0: 9152})]
+op3.met_dependencies = 
+    [   MemoryDep('primals_1', c0, {c0: 23429120}),
+        MemoryDep('primals_2', c1, {c0: 9152, c1: 2560}),
+        MemoryDep('rsqrt', c0, {c0: 9152}),
+        MemoryDep('tangents_1', c0, {c0: 23429120})]
+op3.outputs = [
+    buf3: ComputedBuffer
+    buf3.layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+    buf3.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op3.group.device = cuda:0
+op3.group.iteration = (23429120, 1)
+op3.sizes = ([9152, 2560], [])
+tangents_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+primals_2_layout = FixedLayout('cuda:0', torch.bfloat16, size=[2560], stride=[1])
+rsqrt_layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 1])
+buf2_layout = FixedLayout('cuda:0', torch.float32, size=[32, 286, 1], stride=[286, 1, 9152])
+primals_1_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+buf3_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 286, 2560], stride=[732160, 2560, 1])
+class op3_loop_body:
+    var_ranges = {p0: 9152, p1: 2560}
+    index0 = 2560*p0 + p1
+    index1 = p1
+    index2 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('tangents_1', get_index)
+        get_index_1 = self.get_index('index1')
+        load_1 = ops.load('primals_2', get_index_1)
+        mul = ops.mul(load, load_1)
+        to_dtype = ops.to_dtype(mul, torch.float32, src_dtype = torch.bfloat16)
+        get_index_2 = self.get_index('index2')
+        load_2 = ops.load('rsqrt', get_index_2)
+        mul_1 = ops.mul(to_dtype, load_2)
+        get_index_3 = self.get_index('index2')
+        load_3 = ops.load('buf2', get_index_3)
+        constant = ops.constant(-0.5, torch.float32)
+        mul_2 = ops.mul(load_3, constant)
+        get_index_4 = self.get_index('index2')
+        load_4 = ops.load('rsqrt', get_index_4)
+        mul_3 = ops.mul(load_4, load_4)
+        mul_4 = ops.mul(mul_3, load_4)
+        mul_5 = ops.mul(mul_2, mul_4)
+        constant_1 = ops.constant(0.000390625, torch.float32)
+        mul_6 = ops.mul(mul_5, constant_1)
+        get_index_5 = self.get_index('index0')
+        load_5 = ops.load('primals_1', get_index_5)
+        to_dtype_1 = ops.to_dtype(load_5, torch.float32, src_dtype = torch.bfloat16)
+        constant_2 = ops.constant(2.0, torch.float32)
+        mul_7 = ops.mul(to_dtype_1, constant_2)
+        mul_8 = ops.mul(mul_6, mul_7)
+        add = ops.add(mul_1, mul_8)
+        to_dtype_2 = ops.to_dtype(add, torch.bfloat16, src_dtype = torch.float32)
+        get_index_6 = self.get_index('index0')
+        store = ops.store('buf3', get_index_6, to_dtype_2, None)
+        return store
+
+

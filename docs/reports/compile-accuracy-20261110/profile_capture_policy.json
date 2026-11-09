@@ -1,0 +1,7 @@
+{
+  "rank": 0,
+  "profile_only": true,
+  "fx_graph_cache": false,
+  "triton_binary_cache_preserved": true,
+  "reason": "Retain generated IR and source on fresh graph compilation; no numerical-mode codepath change"
+}

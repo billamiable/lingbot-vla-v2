@@ -1,0 +1,12 @@
+{"state": "running", "run": "smoke_A", "case": "A", "steps": 3, "command": ["bash", "/root/experiments/lingbot-regional-20261109/harness/bench.sh", "--train.teacher_cache_dir", "/raid/teacher_cache/robotwin_clean50_png", "--train.fsdp_no_reshard_after_backward", "true", "--train.fsdp_forward_prefetch_depth", "4", "--train.fsdp_prologue_under", "vit", "--train.fsdp_rs_inflight_depth", "4", "--train.micro_batch_size", "32", "--train.gradient_accumulation_steps", "1", "--train.global_batch_size", "256", "--train.enable_gradient_checkpointing", "true", "--train.fused_joint_qkv_prep", "false", "--train.fused_swiglu", "false"], "time": "2026-11-09T23:44:17.660233"}
+{"state": "error", "error": "FileExistsError(17, 'File exists')", "time": "2026-11-09T23:44:17.660447"}
+Traceback (most recent call last):
+  File "/root/experiments/lingbot-regional-20261109/driver.py", line 65, in <module>
+    try:main()
+  File "/root/experiments/lingbot-regional-20261109/driver.py", line 56, in main
+    for case in ['A','C','B','D']:run('smoke_'+case,case,3,True)
+  File "/root/experiments/lingbot-regional-20261109/driver.py", line 40, in run
+    with (ROOT/f'{name}.launcher.log').open('x') as handle:
+  File "/usr/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileExistsError: [Errno 17] File exists: '/root/experiments/lingbot-regional-20261109/smoke_A.launcher.log'

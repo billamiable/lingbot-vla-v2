@@ -1,0 +1,15 @@
+op0: ExternKernelSchedulerNode(ExternKernelOut)
+op0.writes = [StarDep(name='buf0', mode=None)]
+op0.unmet_dependencies = []
+op0.met_dependencies = 
+    [   StarDep(name='primals_1', mode=None),
+        StarDep(name='primals_2', mode=None),
+        StarDep(name='primals_3', mode=None)]
+op0.outputs = [
+    buf0: ExternKernelOut
+    buf0.layout = FixedLayout('cuda:0', torch.bfloat16, size=[8, 2560], stride=[2560, 1])
+    buf0.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op0.node.kernel = extern_kernels.addmm
+
+

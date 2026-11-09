@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "reference": "train_A1",
+  "ranks": 8,
+  "steps": 300
+}

@@ -1,0 +1,45 @@
+op0: SchedulerNode(ComputedBuffer)
+op0.writes = [MemoryDep('buf0', c0, {c0: 88000})]
+op0.unmet_dependencies = []
+op0.met_dependencies = 
+    [   MemoryDep('clamp_min_1', 0, {}),
+        MemoryDep('primals_7', c0, {c0: 88000}),
+        MemoryDep('tangents_1', 0, {}),
+        MemoryDep('tangents_2', 0, {})]
+op0.outputs = [
+    buf0: ComputedBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 50, 55], stride=[2750, 55, 1])
+    buf0.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op0.group.device = cuda:0
+op0.group.iteration = (88000, 1)
+op0.sizes = ([88000], [])
+tangents_2_layout = FixedLayout('cuda:0', torch.bfloat16, size=[], stride=[])
+tangents_1_layout = FixedLayout('cuda:0', torch.float32, size=[], stride=[])
+clamp_min_1_layout = FixedLayout('cuda:0', torch.int64, size=[], stride=[])
+primals_7_layout = FixedLayout('cuda:0', torch.bool, size=[32, 50, 55], stride=[2750, 55, 1])
+buf0_layout = FixedLayout('cuda:0', torch.bfloat16, size=[32, 50, 55], stride=[2750, 55, 1])
+class op0_loop_body:
+    var_ranges = {p0: 88000}
+    index0 = 0
+    index1 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('tangents_2', get_index)
+        get_index_1 = self.get_index('index0')
+        load_1 = ops.load('tangents_1', get_index_1)
+        to_dtype = ops.to_dtype(load_1, torch.bfloat16, src_dtype = torch.float32)
+        add = ops.add(load, to_dtype)
+        get_index_2 = self.get_index('index0')
+        load_2 = ops.load('clamp_min_1', get_index_2)
+        to_dtype_1 = ops.to_dtype(load_2, torch.bfloat16, src_dtype = torch.int64)
+        truediv = ops.truediv(add, to_dtype_1)
+        get_index_3 = self.get_index('index1')
+        load_3 = ops.load('primals_7', get_index_3)
+        to_dtype_2 = ops.to_dtype(load_3, torch.bfloat16, src_dtype = torch.bool)
+        mul = ops.mul(truediv, to_dtype_2)
+        get_index_4 = self.get_index('index1')
+        store = ops.store('buf0', get_index_4, mul, None)
+        return store
+
+

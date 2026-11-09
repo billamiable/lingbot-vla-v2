@@ -1,0 +1,7 @@
+{"state": "waiting_for_smoke"}
+{"state": "error", "error": "RuntimeError({'state': 'error', 'error': \"RuntimeError('Run failed: smoke_B')\", 'time': '2026-11-09T23:48:52.214791'})"}
+{"ready": false, "completed": 0, "cells": {}}
+Traceback (most recent call last):
+  File "/root/experiments/lingbot-regional-20261109/followup.py", line 15, in <module>
+    if state['state'] in ['error','failed']:raise RuntimeError(state)
+RuntimeError: {'state': 'error', 'error': "RuntimeError('Run failed: smoke_B')", 'time': '2026-11-09T23:48:52.214791'}

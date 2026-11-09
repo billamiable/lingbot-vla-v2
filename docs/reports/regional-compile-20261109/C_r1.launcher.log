@@ -1,0 +1,3 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+run                                        mean s   median   CV %  samp/s  teacher  peak MiB  loss@30
+C_r1                                       2.9650   2.8792 12.513  86.339    0.000     60907   0.1693

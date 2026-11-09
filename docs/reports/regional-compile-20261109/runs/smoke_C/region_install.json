@@ -1,0 +1,7 @@
+{
+  "vlm_layers": 36,
+  "expert_layers": 36,
+  "fullgraph": false,
+  "checkpoint_boundary": "pure-forward-hooks-outside",
+  "regional": false
+}

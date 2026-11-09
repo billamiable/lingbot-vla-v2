@@ -1,0 +1,17 @@
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 0, "cells": {}}
+{"ready": false, "completed": 1, "cells": {"A": 3.3366}}
+{"ready": false, "completed": 2, "cells": {"A": 3.3366, "B": 2.8602}}
+{"ready": false, "completed": 3, "cells": {"A": 3.3366, "B": 2.8602, "D": 3.675}}
+{"ready": false, "completed": 4, "cells": {"A": 3.3366, "B": 2.8602, "C": 3.7529, "D": 3.675}}
+{"ready": false, "completed": 5, "cells": {"A": 3.3366, "B": 2.8602, "C": 3.7473, "D": 3.675}}
+{"ready": false, "completed": 6, "cells": {"A": 3.3366, "B": 2.8602, "C": 3.7473, "D": 3.6877}}
+{"ready": false, "completed": 7, "cells": {"A": 3.3366, "B": 2.8599, "C": 3.7473, "D": 3.6877}}
+{"ready": true, "completed": 8, "cells": {"A": 3.3358, "B": 2.8599, "C": 3.7473, "D": 3.6877}}

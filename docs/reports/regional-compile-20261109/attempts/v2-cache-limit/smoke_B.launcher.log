@@ -1,0 +1,4 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+trainer exited with 1
+run                                        mean s   median   CV %  samp/s  teacher  peak MiB  loss@30
+smoke_B                                  incomplete

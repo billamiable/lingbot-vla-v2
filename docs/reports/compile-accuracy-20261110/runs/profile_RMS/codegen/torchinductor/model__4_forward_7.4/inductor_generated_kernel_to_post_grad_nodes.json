@@ -1,0 +1,1 @@
+{"triton_poi_fused_add_mul_rsub_sub_0": ["add", "mul", "mul_1", "sub", "sub_1"], "triton_poi_fused_convolution_0": ["convolution"], "triton_poi_fused_add_0": ["add_1", "add"], "triton_poi_fused_add_index_select_1": ["index", "add_2"]}
