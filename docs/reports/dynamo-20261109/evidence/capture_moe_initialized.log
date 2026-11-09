@@ -1,9 +1,0 @@
-Overwriting feature type 'VideoFrame' (VideoFrame -> VideoFrame)
-[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 22:57:46 >> Initializing parallel state... dp_size 1, dp_replicate_size 1, dp_shard_size 1,tp_size 1, pp_size 1, cp_size 1, ulysses_size 1
-[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 22:57:46 >> Device mesh: DeviceMesh('cuda', [0], mesh_dim_names=('dp_shard',))
-[INFO][lingbotvla.distributed.parallel_state:114] 11/09/2026 22:57:46 >> EP FSDP device mesh: None
-/bin/sh: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-{"case": "action_output_moe_noac", "passed": false, "stage": "capture_forward", "seconds": 0.7553813457489014}
-{"case": "action_output_moe_ac", "passed": false, "stage": "capture_forward", "seconds": 0.03819870948791504}
-{"case": "joint_moe_precomputed_noac", "passed": false, "stage": "capture_forward", "seconds": 0.7696151733398438}
-{"case": "joint_moe_precomputed_ac", "passed": false, "stage": "capture_forward", "seconds": 0.23495864868164062}

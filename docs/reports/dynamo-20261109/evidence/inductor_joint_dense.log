@@ -1,9 +1,0 @@
-Overwriting feature type 'VideoFrame' (VideoFrame -> VideoFrame)
-/root/qihank/envs/lingbotvla/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:282: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
-  warnings.warn(
-/bin/sh: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/root/experiments/lingbot-dynamo-20261109/probe.py:118: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
-Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:835.)
-  result.update(passed=True,stage='complete',loss=float(loss),captured_graphs=len(graphs))
-{"case": "joint_precomputed_noac", "passed": true, "stage": "complete", "seconds": 8.320441961288452}
-{"case": "joint_precomputed_ac", "passed": true, "stage": "complete", "seconds": 4.8225274085998535}

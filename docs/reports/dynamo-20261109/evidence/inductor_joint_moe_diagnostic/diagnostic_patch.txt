@@ -1,1 +1,0 @@
-Process-local only: remove assert lambda: index.unique().numel() == M * topk. The original asserts the truthiness of a lambda object and never executes its body. No source file was modified.
