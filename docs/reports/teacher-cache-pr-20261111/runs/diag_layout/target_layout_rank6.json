@@ -1,0 +1,122 @@
+{
+  "teacher_depth": {
+    "online": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1,
+        256
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    },
+    "cached": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    }
+  },
+  "teacher_future_depth": {
+    "online": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1,
+        256
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    },
+    "cached": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    }
+  },
+  "teacher_video_future": {
+    "online": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    },
+    "cached": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    }
+  },
+  "teacher_video_current": {
+    "online": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    },
+    "cached": {
+      "shape": [
+        32,
+        256,
+        1024
+      ],
+      "stride": [
+        262144,
+        1024,
+        1
+      ],
+      "offset": 0,
+      "dtype": "torch.bfloat16"
+    }
+  }
+}

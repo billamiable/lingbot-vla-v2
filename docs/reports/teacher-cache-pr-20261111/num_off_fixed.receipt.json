@@ -1,0 +1,20 @@
+{
+  "run": "num_off_fixed",
+  "kind": "off",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "seconds": 108.811354637146,
+  "verify_steps": 0,
+  "small": false,
+  "numeric": true
+}

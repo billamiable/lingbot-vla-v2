@@ -1,0 +1,20 @@
+{
+  "run": "num_read_fixed",
+  "kind": "read",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "seconds": 126.63585162162781,
+  "verify_steps": 0,
+  "small": false,
+  "numeric": true
+}

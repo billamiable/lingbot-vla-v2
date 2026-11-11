@@ -1,0 +1,20 @@
+{
+  "run": "final_base_2",
+  "kind": "base",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    31,
+    31,
+    31,
+    31,
+    31,
+    31,
+    31,
+    31
+  ],
+  "seconds": 266.3532373905182,
+  "verify_steps": 0,
+  "small": false,
+  "numeric": false
+}

@@ -1,0 +1,1 @@
+{"data_wait_s": 22.011023592669517, "peak_allocated_bytes": 53797408768, "peak_reserved_bytes": 59678654464, "step": 1, "elapsed_s": 47.7924297680147, "teacher_s": 1.4091134071350098, "grad_norm": 0.971468985080719, "loss": 0.3994140625, "vla_loss": 0.368408203125, "depth_loss": 3.414154052734375, "future_depth_loss": 3.326416015625, "future_video_loss": 0.7472038269042969}

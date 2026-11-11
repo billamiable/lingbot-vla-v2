@@ -1,0 +1,18 @@
+{
+  "final_base_1": {
+    "max_temperature_c": 62,
+    "thermal_throttle_samples": 0
+  },
+  "final_cache_1": {
+    "max_temperature_c": 62,
+    "thermal_throttle_samples": 0
+  },
+  "final_cache_2": {
+    "max_temperature_c": 62,
+    "thermal_throttle_samples": 0
+  },
+  "final_base_2": {
+    "max_temperature_c": 64,
+    "thermal_throttle_samples": 0
+  }
+}

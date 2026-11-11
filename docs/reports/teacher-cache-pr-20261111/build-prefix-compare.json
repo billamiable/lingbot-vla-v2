@@ -1,0 +1,9 @@
+{
+  "samples": 1150,
+  "bit_equal": {
+    "depth": true,
+    "video_current": true,
+    "video_future": true,
+    "future_index": true
+  }
+}

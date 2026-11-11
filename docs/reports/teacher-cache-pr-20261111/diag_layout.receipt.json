@@ -1,0 +1,20 @@
+{
+  "run": "diag_layout",
+  "kind": "verify",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "seconds": 83.3277678489685,
+  "verify_steps": 1,
+  "small": false,
+  "numeric": false
+}

@@ -1,0 +1,20 @@
+{
+  "run": "num_verify_fixed",
+  "kind": "verify",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "seconds": 112.10699677467346,
+  "verify_steps": 3,
+  "small": false,
+  "numeric": true
+}

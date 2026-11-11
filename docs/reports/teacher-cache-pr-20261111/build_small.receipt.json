@@ -1,0 +1,20 @@
+{
+  "run": "build_small",
+  "kind": "build",
+  "passed": true,
+  "returncode": 0,
+  "records": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "seconds": 70.17475390434265,
+  "verify_steps": 0,
+  "small": true,
+  "numeric": false
+}
